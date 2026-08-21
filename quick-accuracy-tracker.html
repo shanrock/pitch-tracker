@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Quick Accuracy Tracker — Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-base: #F7F3E8; --bg-track: #EEF2F7; --card: #FFFFFF; --card-2: #F1ECDC;
+    --ink: #1E2B22; --ink-dim: rgba(30,43,34,0.62); --ink-faint: rgba(30,43,34,0.16);
+    --clay: #B5651D; --clay-dark: #8A4B15;
+    --grass: #3F6B34; --grass-dark: #2B4C24;
+    --mustard: #C9A227; --mustard-dark: #8C6608;
+    --brick: #A83226; --brick-dark: #7A241A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{height:100%;}
+  body{margin:0; background:var(--bg-base); font-family:'Inter', sans-serif; color:var(--ink); display:flex; justify-content:center;}
+  #app{width:100%; max-width:430px; min-height:100vh; display:flex; flex-direction:column; background:var(--bg-base); border-left:1px solid rgba(0,0,0,0.06); border-right:1px solid rgba(0,0,0,0.06);}
+  .screen{display:none; flex-direction:column; flex:1; min-height:100vh;}
+  .screen.active{display:flex;}
+  #screen-track.active{background:var(--bg-track);}
+
+  .topbar{padding:14px 16px 10px; border-bottom:1px dashed var(--ink-faint); display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .topbar .who .name{font-weight:800; font-size:16px;}
+  .topbar .who .sub{font-size:11px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace;}
+  .icon-btn{background:var(--card); border:1px solid var(--ink-faint); color:var(--ink); border-radius:8px; padding:8px 10px; font-family:'Inter'; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;}
+  .icon-btn:active{transform:scale(0.96);}
+
+  .setup-wrap{flex:1; display:flex; flex-direction:column; padding:26px 22px;}
+  .resume-banner{display:none; background:var(--card); border:1px solid var(--clay); border-radius:12px; padding:14px 16px; margin-bottom:20px;}
+  .resume-banner .rb-title{font-weight:800; font-size:13px; margin-bottom:3px;}
+  .resume-banner .rb-sub{font-size:11.5px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace; margin-bottom:10px;}
+  .resume-banner .rb-actions{display:flex; gap:8px;}
+  .resume-banner .rb-actions button{flex:1; padding:9px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; border:1px solid var(--ink-faint);}
+  .rb-resume{background:var(--clay); color:#FFF8EF; border-color:var(--clay-dark) !important;}
+  .rb-discard{background:var(--card);}
+  .brand-eyebrow{font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.18em; color:var(--clay-dark); text-transform:uppercase; margin-bottom:6px; font-weight:700;}
+  .brand-title{font-family:'Teko', sans-serif; font-weight:600; font-size:42px; line-height:.95; margin:0 0 4px; color:var(--ink);}
+  .brand-sub{color:var(--ink-dim); font-size:13px; margin:0 0 22px; max-width:34ch;}
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-dim); margin-bottom:6px; font-family:'IBM Plex Mono', monospace; font-weight:600;}
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+  input[type=text], input[type=number], input[type=email]{width:100%; background:var(--card); border:1px solid var(--ink-faint); color:var(--ink); border-radius:8px; padding:12px; font-size:15px; font-family:'Inter';}
+  input:focus{outline:2px solid var(--clay); outline-offset:1px;}
+  .primary-btn{margin-top:10px; width:100%; background:var(--clay); color:#FFF8EF; border:none; border-radius:10px; padding:16px; font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 4px 0 #7A430F;}
+  .primary-btn:active{transform:translateY(2px); box-shadow:0 2px 0 #7A430F;}
+  .ghost-btn{width:100%; background:var(--card); border:1px solid var(--ink-faint); color:var(--ink-dim); border-radius:10px; padding:13px; font-size:13px; font-weight:700; cursor:pointer; margin-top:10px;}
+  .ghost-btn:active{transform:scale(0.98);}
+
+  .pitch-chip-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;}
+  .pitch-chip{background:var(--card); border:1px solid var(--ink-faint); color:var(--ink); border-radius:9px; padding:12px 8px; font-size:13.5px; font-weight:700; text-align:center; cursor:pointer;}
+  .pitch-chip.selected{background:var(--clay); color:#FFF8EF; border-color:var(--clay-dark);}
+  .field-hint{font-size:11px; color:var(--ink-dim); margin:-8px 0 14px;}
+
+  .body-scroll{flex:1; overflow-y:auto; padding:12px 16px 24px;}
+  .section-label{font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin:12px 0 7px; display:flex; align-items:center; gap:8px; font-weight:600;}
+  .section-label .line{flex:1; height:1px; background:var(--ink-faint);}
+
+  .pitch-grid{display:grid; grid-template-columns:1fr 1fr; gap:7px;}
+  .pitch-btn{background:var(--card); border:1px solid var(--ink-faint); color:var(--ink); border-radius:9px; padding:14px 8px; font-size:14px; font-weight:700; cursor:pointer; text-align:center;}
+  .pitch-btn:active{transform:scale(.96);}
+  .pitch-btn.selected{background:var(--clay); color:#FFF8EF; border-color:var(--clay-dark);}
+
+  .pitch-count-banner{display:flex; align-items:baseline; justify-content:center; gap:8px; margin:4px 0 2px;}
+  .pitch-count-banner .num{font-family:'Teko', sans-serif; font-weight:700; font-size:44px; line-height:.8;}
+  .pitch-count-banner .lbl{font-size:11px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace; text-transform:uppercase; letter-spacing:.06em;}
+
+  .zone-wrap{display:flex; justify-content:center; margin:8px 0 2px;}
+  .zone-grid{display:grid; grid-template-columns:repeat(5, 1fr); grid-template-rows:repeat(5, 1fr); width:100%; max-width:398px; aspect-ratio:1/1; gap:6px; padding:8px; background:rgba(0,0,0,0.045); border-radius:14px;}
+  .zone-cell{background:rgba(30,43,34,0.05); border-radius:7px; cursor:pointer; min-height:50px; transition:background-color .12s ease;}
+  .zone-cell.core{border:2.5px dashed rgba(30,43,34,0.4); background:rgba(30,43,34,0.09);}
+  .zone-cell:active{transform:scale(.94);}
+  .zone-cell.called{background:var(--mustard) !important; border-color:var(--mustard-dark) !important;}
+  .zone-cell.actual{background:var(--brick) !important; border-color:var(--brick-dark) !important;}
+  .zone-cell.ontarget{background:var(--grass) !important; border-color:var(--grass-dark) !important;}
+  .disabled-veil{opacity:.35; pointer-events:none;}
+  .zone-hint{text-align:center; font-size:11px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace; margin-top:6px;}
+  .zone-legend{display:flex; justify-content:center; gap:14px; margin-top:8px; font-size:10.5px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace;}
+  .zone-legend span{display:inline-flex; align-items:center; gap:5px;}
+  .swatch{width:10px; height:10px; border-radius:3px; display:inline-block;}
+
+  .log-strip{display:flex; gap:6px; overflow-x:auto; padding:2px 2px 6px;}
+  .log-chip{flex:0 0 auto; font-family:'IBM Plex Mono', monospace; font-size:10.5px; padding:6px 8px; border-radius:6px; border:1px solid var(--ink-faint); color:var(--ink-dim); white-space:nowrap; background:var(--card);}
+  .log-chip.hit{color:var(--grass-dark); border-color:var(--grass);}
+  .log-chip.miss{color:var(--brick-dark); border-color:var(--brick);}
+  .empty-log{color:var(--ink-dim); font-size:12.5px; text-align:center; padding:16px 0;}
+
+  .report-header{padding:20px 20px 6px;}
+  .report-header .eyebrow{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--clay-dark); letter-spacing:.12em; text-transform:uppercase; font-weight:700;}
+  .report-header h1{font-family:'Teko', sans-serif; font-weight:600; font-size:36px; margin:2px 0 2px; line-height:1;}
+  .report-header .sub{font-size:12px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace;}
+
+  .stat-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:16px 20px 6px;}
+  .stat-card{background:var(--card); border:1px solid var(--ink-faint); border-radius:10px; padding:12px 10px; text-align:center;}
+  .stat-card .val{font-family:'Teko', sans-serif; font-size:30px; font-weight:600; line-height:1;}
+  .stat-card .lbl{font-size:9.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.05em; margin-top:2px;}
+
+  .table-wrap{margin:16px 20px 10px; border:1px solid var(--ink-faint); border-radius:10px; overflow:hidden; background:var(--card);}
+  table{width:100%; border-collapse:collapse; font-family:'IBM Plex Mono', monospace; font-size:11px;}
+  th, td{padding:8px; text-align:left; border-bottom:1px solid var(--ink-faint); white-space:nowrap;}
+  th{background:rgba(30,43,34,0.05); font-weight:700; color:var(--ink-dim); text-transform:uppercase; font-size:9.5px; letter-spacing:.04em;}
+  tr:last-child td{border-bottom:none;}
+  .table-scroll{overflow-x:auto;}
+
+  .heatmap-toggle{display:flex; gap:6px; margin:0 20px 10px;}
+  .heatmap-toggle button{flex:1; padding:9px 6px; border-radius:8px; border:1px solid var(--ink-faint); background:var(--card); color:var(--ink-dim); font-size:11.5px; font-weight:700; cursor:pointer;}
+  .heatmap-toggle button.active{background:var(--ink); color:#FBF7EE; border-color:var(--ink);}
+
+  .heatmap-grid{display:grid; grid-template-columns:repeat(5,1fr); grid-template-rows:repeat(5,1fr); gap:5px; margin:0 20px 8px; aspect-ratio:1/1; padding:8px; background:rgba(0,0,0,0.04); border-radius:12px;}
+  .heat-cell{border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono', monospace; font-size:10.5px; font-weight:600; color:var(--ink); min-height:44px;}
+  .heat-cell.core{border:2px dashed rgba(30,43,34,0.3);}
+  .heatmap-caption{font-size:11px; color:var(--ink-dim); text-align:center; margin:0 20px 4px; font-family:'IBM Plex Mono', monospace;}
+
+  .report-actions{padding:16px 20px 26px; display:flex; flex-direction:column; gap:10px;}
+  .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(10px); background:var(--grass-dark); color:#FFF8EF; font-weight:700; font-size:13px; padding:10px 16px; border-radius:8px; opacity:0; pointer-events:none; transition:all .25s ease; max-width:86%; text-align:center; z-index:50;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .field-error input{border-color:var(--brick) !important; animation:shake .3s;}
+  @keyframes shake{25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+
+  .modal-overlay{position:fixed; inset:0; background:rgba(20,25,15,0.45); display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:80;}
+  .modal-overlay.show{opacity:1; pointer-events:auto;}
+  .modal-card{width:100%; max-width:430px; background:var(--bg-base); border-radius:16px 16px 0 0; padding:20px 20px 26px; transform:translateY(12px); transition:transform .2s ease;}
+  .modal-overlay.show .modal-card{transform:translateY(0);}
+  .modal-card h3{font-family:'Teko', sans-serif; font-size:24px; font-weight:600; margin:0 0 12px;}
+  .modal-actions{display:flex; gap:10px; margin-top:6px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== SETUP ===================== -->
+  <div class="screen active" id="screen-setup">
+    <div class="setup-wrap">
+      <div class="resume-banner" id="resume-banner">
+        <div class="rb-title">Unfinished game found</div>
+        <div class="rb-sub" id="resume-banner-text">—</div>
+        <div class="rb-actions">
+          <button class="rb-resume" onclick="resumeSavedGame()">Resume</button>
+          <button class="rb-discard" onclick="discardSavedGame()">Discard</button>
+        </div>
+      </div>
+      <div class="brand-eyebrow">Mockup · Quick Accuracy Tracker</div>
+      <h1 class="brand-title">Call it.<br>Track it.<br>See it.</h1>
+      <p class="brand-sub">Just command &amp; accuracy — no counts, no lineup. One screen, two taps per pitch.</p>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="setup-pname">Pitcher name</label>
+          <input type="text" id="setup-pname" placeholder="e.g. Ava M." />
+        </div>
+        <div class="field" style="max-width:100px;">
+          <label for="setup-pnum">#</label>
+          <input type="number" id="setup-pnum" placeholder="7" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="setup-game">Game / opponent (optional)</label>
+        <input type="text" id="setup-game" placeholder="vs Riverside" />
+      </div>
+
+      <div class="field">
+        <label>Which pitches does she throw?</label>
+        <div class="pitch-chip-grid" id="setup-pitch-chips"></div>
+      </div>
+
+      <div class="field">
+        <label for="setup-custom-pitch">Other pitch (optional, free-form)</label>
+        <input type="text" id="setup-custom-pitch" placeholder="e.g. Knuckle-rise" />
+      </div>
+      <div class="field-hint">Pick at least one, or fill in the custom field.</div>
+
+      <button class="primary-btn" onclick="startGame()">Start Tracking</button>
+    </div>
+  </div>
+
+  <!-- ===================== TRACK SCREEN (combined) ===================== -->
+  <div class="screen" id="screen-track">
+    <div class="topbar">
+      <div class="who">
+        <div class="name" id="track-pitcher-name">—</div>
+        <div class="sub" id="track-game-label">—</div>
+      </div>
+      <button class="icon-btn" onclick="goReport()">End Game</button>
+    </div>
+
+    <div class="pitch-count-banner">
+      <span class="num" id="track-pitch-count">0</span>
+      <span class="lbl">pitches thrown</span>
+    </div>
+
+    <div class="body-scroll">
+      <div class="section-label"><span>1 · Pitch type</span><span class="line"></span></div>
+      <div class="pitch-grid" id="pitch-type-grid"></div>
+
+      <div class="section-label"><span>2 · Tap called, then tap actual</span><span class="line"></span></div>
+      <div class="zone-wrap">
+        <div class="zone-grid disabled-veil" id="track-zone-grid"></div>
+      </div>
+      <div class="zone-hint" id="zone-hint-text">Pick a pitch type, then tap the called spot.</div>
+      <div class="zone-legend">
+        <span><span class="swatch" style="background:var(--mustard);"></span>Called</span>
+        <span><span class="swatch" style="background:var(--brick);"></span>Actual (miss)</span>
+        <span><span class="swatch" style="background:var(--grass);"></span>On target</span>
+      </div>
+
+      <div class="section-label"><span id="log-section-label">Log</span><span class="line"></span></div>
+      <div class="log-strip" id="log-strip"><div class="empty-log">No pitches yet.</div></div>
+    </div>
+  </div>
+
+  <!-- ===================== REPORT ===================== -->
+  <div class="screen" id="screen-report">
+    <div class="body-scroll" style="padding:0;">
+      <div class="report-header">
+        <div class="eyebrow">Post-Game Recap · Accuracy Mode</div>
+        <h1 id="rep-title">Pitcher</h1>
+        <div class="sub" id="rep-sub">—</div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card"><div class="val" id="rep-total">0</div><div class="lbl">Pitches</div></div>
+        <div class="stat-card"><div class="val" id="rep-accuracy">0%</div><div class="lbl">On target</div></div>
+        <div class="stat-card"><div class="val" id="rep-favpitch">—</div><div class="lbl">Most thrown</div></div>
+      </div>
+
+      <div class="section-label" style="margin:14px 20px 8px;"><span>By pitch type</span><span class="line"></span></div>
+      <div class="table-wrap" style="margin-top:0;">
+        <div class="table-scroll">
+          <table id="rep-type-table">
+            <thead><tr><th>Type</th><th># Thrown</th><th>On Target%</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin:18px 20px 8px;"><span>Heatmap</span><span class="line"></span></div>
+      <div class="heatmap-toggle" id="heatmap-toggle">
+        <button data-mode="called" class="active" onclick="setHeatmapMode('called')">Called freq.</button>
+        <button data-mode="actual" onclick="setHeatmapMode('actual')">Actual freq.</button>
+        <button data-mode="accuracy" onclick="setHeatmapMode('accuracy')">Accuracy %</button>
+      </div>
+      <div class="heatmap-grid" id="heatmap-grid"></div>
+      <div class="heatmap-caption" id="heatmap-caption">—</div>
+
+      <div class="section-label" style="margin:16px 20px 8px;"><span>Full pitch log</span><span class="line"></span></div>
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table id="rep-log-table">
+            <thead><tr><th>#</th><th>Type</th><th>Called</th><th>Actual</th><th>On Target</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="report-actions">
+        <button class="primary-btn" onclick="exportCSV()">Export CSV</button>
+        <button class="ghost-btn" onclick="emailRecap()">Email recap to coach</button>
+        <button class="ghost-btn" onclick="backToGame()">← Back to game (keep tracking)</button>
+        <button class="ghost-btn" onclick="newGame()">Start a new game</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal-card">
+    <h3 id="modal-title">Title</h3>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="ghost-btn" style="flex:1; margin-top:0;" onclick="closeModal()">Cancel</button>
+      <button class="primary-btn" style="flex:1; margin-top:0;" id="modal-confirm-btn" onclick="confirmModal()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PITCH_TYPES = ['Fastball','Changeup','Riseball','Dropball','Curveball','Screwball'];
+
+let state = {
+  pitcher: {name:'', number:''},
+  gameLabel: '',
+  activeTypes: [],
+  pitches: [],
+  pendingType: null,
+  pendingCalled: null
+};
+
+/* ---------------- Zone helpers ---------------- */
+function rowWord(r){ return r<=1 ? 'High' : r>=3 ? 'Low' : 'Middle'; }
+function colWord(c){ return c<=1 ? 'In' : c>=3 ? 'Away' : 'Middle'; }
+function zoneLabel(r,c){
+  const rw = rowWord(r), cw = colWord(c);
+  if(rw==='Middle' && cw==='Middle') return 'Down the Middle';
+  return rw + ' ' + cw;
+}
+function inZoneCore(r,c){ return r>=1 && r<=3 && c>=1 && c<=3; }
+
+/* ---------------- Modal ---------------- */
+let currentModalFields = [];
+let currentModalConfirm = null;
+function openModal(title, fields, onConfirm, confirmLabel, message){
+  currentModalFields = fields;
+  currentModalConfirm = onConfirm;
+  document.getElementById('modal-title').textContent = title;
+  const body = document.getElementById('modal-body');
+  body.innerHTML = '';
+  if(message){
+    const p = document.createElement('p');
+    p.style.cssText = 'font-size:13px; color:var(--ink-dim); margin:0 0 14px;';
+    p.textContent = message;
+    body.appendChild(p);
+  }
+  fields.forEach(f=>{
+    const wrap = document.createElement('div'); wrap.className = 'field';
+    const lbl = document.createElement('label'); lbl.textContent = f.label;
+    const inp = document.createElement('input'); inp.type = f.type||'text'; inp.id = 'modal-'+f.id; inp.placeholder = f.placeholder||'';
+    wrap.appendChild(lbl); wrap.appendChild(inp);
+    body.appendChild(wrap);
+  });
+  document.getElementById('modal-confirm-btn').textContent = confirmLabel || 'Confirm';
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('show'); }
+function confirmModal(){
+  const vals = {};
+  currentModalFields.forEach(f=>{ const el=document.getElementById('modal-'+f.id); vals[f.id]= el? el.value.trim() : ''; });
+  const cb = currentModalConfirm;
+  closeModal();
+  if(cb) cb(vals);
+}
+
+/* ---------------- Setup ---------------- */
+function renderSetupChips(){
+  const el = document.getElementById('setup-pitch-chips');
+  el.innerHTML = '';
+  PITCH_TYPES.forEach(t=>{
+    const chip = document.createElement('div');
+    chip.className = 'pitch-chip';
+    chip.textContent = t;
+    chip.onclick = ()=> chip.classList.toggle('selected');
+    el.appendChild(chip);
+  });
+}
+renderSetupChips();
+
+function startGame(){
+  const pnameEl = document.getElementById('setup-pname');
+  const pnumEl = document.getElementById('setup-pnum');
+  const pname = pnameEl.value.trim();
+  const pnum = pnumEl.value.trim();
+  if(!pname && !pnum){
+    flashToast('Add a pitcher name or number');
+    [pnameEl,pnumEl].forEach(el=>{ el.parentElement.classList.add('field-error'); setTimeout(()=>el.parentElement.classList.remove('field-error'),400); });
+    return;
+  }
+  const selectedChips = Array.from(document.querySelectorAll('.pitch-chip.selected')).map(c=>c.textContent);
+  const custom = document.getElementById('setup-custom-pitch').value.trim();
+  const activeTypes = [...selectedChips];
+  if(custom) activeTypes.push(custom);
+  if(activeTypes.length === 0){
+    flashToast('Pick at least one pitch, or add a custom one');
+    return;
+  }
+
+  state.pitcher = {name: pname || 'Pitcher', number: pnum};
+  state.gameLabel = document.getElementById('setup-game').value.trim();
+  state.activeTypes = activeTypes;
+  state.pitches = [];
+  state.pendingType = null;
+  state.pendingCalled = null;
+
+  renderTrackPitchGrid();
+  buildZoneGrid();
+  showScreen('screen-track');
+  refreshTrackScreen();
+}
+
+/* ---------------- Track screen ---------------- */
+function renderTrackPitchGrid(){
+  const el = document.getElementById('pitch-type-grid');
+  el.innerHTML = '';
+  state.activeTypes.forEach(t=>{
+    const b = document.createElement('div');
+    b.className = 'pitch-btn';
+    b.textContent = t;
+    b.onclick = () => selectPitchType(t, b);
+    el.appendChild(b);
+  });
+}
+function selectPitchType(type, el){
+  state.pendingType = type;
+  document.querySelectorAll('#pitch-type-grid .pitch-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('track-zone-grid').classList.remove('disabled-veil');
+  document.getElementById('zone-hint-text').textContent = 'Tap the called spot.';
+}
+
+function buildZoneGrid(){
+  const el = document.getElementById('track-zone-grid');
+  el.innerHTML = '';
+  for(let r=0;r<5;r++){
+    for(let c=0;c<5;c++){
+      const cell = document.createElement('div');
+      cell.className = 'zone-cell' + (inZoneCore(r,c) ? ' core' : '');
+      cell.dataset.row = r; cell.dataset.col = c;
+      cell.onclick = () => onZoneTap(r,c,cell);
+      el.appendChild(cell);
+    }
+  }
+}
+
+function onZoneTap(r,c,cellEl){
+  if(!state.pendingType){ flashToast('Pick a pitch type first'); return; }
+  if(!state.pendingCalled){
+    state.pendingCalled = {row:r, col:c, el:cellEl};
+    cellEl.classList.add('called');
+    document.getElementById('zone-hint-text').textContent = 'Now tap where it actually went.';
+    return;
+  }
+  // second tap = actual location
+  const cz = state.pendingCalled;
+  const onTarget = (cz.row === r && cz.col === c);
+  if(onTarget){
+    cz.el.classList.remove('called');
+    cellEl.classList.add('ontarget');
+  } else {
+    cellEl.classList.add('actual');
+  }
+  const n = state.pitches.length + 1;
+  state.pitches.push({
+    n, type: state.pendingType,
+    calledRow: cz.row, calledCol: cz.col, calledLabel: zoneLabel(cz.row, cz.col),
+    actualRow: r, actualCol: c, actualLabel: zoneLabel(r,c),
+    onTarget
+  });
+
+  setTimeout(()=>{
+    document.querySelectorAll('#track-zone-grid .zone-cell').forEach(cell=>cell.classList.remove('called','actual','ontarget'));
+    document.querySelectorAll('#pitch-type-grid .pitch-btn').forEach(b=>b.classList.remove('selected'));
+    document.getElementById('track-zone-grid').classList.add('disabled-veil');
+    document.getElementById('zone-hint-text').textContent = 'Pick a pitch type, then tap the called spot.';
+    state.pendingType = null;
+    state.pendingCalled = null;
+    refreshTrackScreen();
+  }, 380);
+}
+
+function refreshTrackScreen(){
+  document.getElementById('track-pitcher-name').textContent = displayPitcher();
+  document.getElementById('track-game-label').textContent = state.gameLabel || 'Untitled game';
+  document.getElementById('track-pitch-count').textContent = state.pitches.length;
+  document.getElementById('log-section-label').textContent = 'Log (' + state.pitches.length + ')';
+  persistState();
+
+  const strip = document.getElementById('log-strip');
+  if(state.pitches.length === 0){
+    strip.innerHTML = '<div class="empty-log">No pitches yet.</div>';
+  } else {
+    strip.innerHTML = '';
+    state.pitches.slice().reverse().slice(0,14).forEach(p=>{
+      const chip = document.createElement('div');
+      chip.className = 'log-chip ' + (p.onTarget ? 'hit' : 'miss');
+      chip.textContent = '#' + p.n + ' ' + shortType(p.type) + ' · ' + (p.onTarget ? 'On target' : p.actualLabel);
+      strip.appendChild(chip);
+    });
+  }
+}
+function shortType(t){ return {'Fastball':'FB','Changeup':'CH','Riseball':'RISE','Dropball':'DROP','Curveball':'CRV','Screwball':'SCRW'}[t] || t; }
+function displayPitcher(){ return (state.pitcher.number?'#'+state.pitcher.number+' ':'') + state.pitcher.name; }
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ---------------- Persistence (localStorage) ---------------- */
+const STORAGE_KEY = 'quickAccuracyState_v1';
+function persistState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){ /* fail silently */ }
+}
+function checkForSavedGame(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const saved = JSON.parse(raw);
+    if(!saved || !saved.pitcher || (!saved.pitcher.name && !saved.pitcher.number)) return;
+    window.__savedGame = saved;
+    const pname = (saved.pitcher.number ? '#'+saved.pitcher.number+' ' : '') + (saved.pitcher.name || 'Pitcher');
+    document.getElementById('resume-banner-text').textContent = pname + ' · ' + (saved.pitches ? saved.pitches.length : 0) + ' pitches logged so far.';
+    document.getElementById('resume-banner').style.display = 'block';
+  }catch(e){ /* ignore corrupt storage */ }
+}
+function resumeSavedGame(){
+  if(!window.__savedGame) return;
+  state = window.__savedGame;
+  renderTrackPitchGrid();
+  buildZoneGrid();
+  showScreen('screen-track');
+  refreshTrackScreen();
+  flashToast('Game resumed');
+}
+function discardSavedGame(){
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  document.getElementById('resume-banner').style.display = 'none';
+  window.__savedGame = null;
+  flashToast('Cleared saved game');
+}
+checkForSavedGame();
+
+let toastTimer;
+function flashToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+/* ---------------- Report ---------------- */
+let heatmapMode = 'called';
+function goReport(){
+  if(state.pitches.length === 0){
+    openModal('End game?', [], ()=>{ buildReport(); showScreen('screen-report'); }, 'End game', 'No pitches logged yet. End game anyway?');
+    return;
+  }
+  buildReport();
+  showScreen('screen-report');
+}
+function backToGame(){ showScreen('screen-track'); }
+
+function buildReport(){
+  document.getElementById('rep-title').textContent = displayPitcher() || 'Pitcher';
+  document.getElementById('rep-sub').textContent = (state.gameLabel || 'Untitled game') + ' · ' + new Date().toLocaleDateString();
+
+  const pitches = state.pitches;
+  const total = pitches.length;
+  document.getElementById('rep-total').textContent = total;
+  const onTargetN = pitches.filter(p=>p.onTarget).length;
+  document.getElementById('rep-accuracy').textContent = total ? Math.round((onTargetN/total)*100)+'%' : '0%';
+
+  const typeCounts = {};
+  pitches.forEach(p=> typeCounts[p.type] = (typeCounts[p.type]||0)+1 );
+  let favType='—', favN=0;
+  Object.keys(typeCounts).forEach(t=>{ if(typeCounts[t]>favN){favN=typeCounts[t]; favType=t;} });
+  document.getElementById('rep-favpitch').textContent = total ? shortType(favType) : '—';
+
+  const tbody = document.querySelector('#rep-type-table tbody');
+  tbody.innerHTML = '';
+  state.activeTypes.forEach(t=>{
+    const rows = pitches.filter(p=>p.type===t);
+    if(rows.length===0) return;
+    const pct = Math.round((rows.filter(p=>p.onTarget).length/rows.length)*100);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${t}</td><td>${rows.length}</td><td>${pct}%</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const logBody = document.querySelector('#rep-log-table tbody');
+  logBody.innerHTML = '';
+  pitches.forEach(p=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.n}</td><td>${shortType(p.type)}</td><td>${p.calledLabel}</td><td>${p.actualLabel}</td><td>${p.onTarget?'✓':'✗'}</td>`;
+    logBody.appendChild(tr);
+  });
+
+  renderHeatmap();
+}
+
+function setHeatmapMode(mode){
+  heatmapMode = mode;
+  document.querySelectorAll('#heatmap-toggle button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+  renderHeatmap();
+}
+
+function renderHeatmap(){
+  const pitches = state.pitches;
+  const calledCounts = Array.from({length:5},()=>Array(5).fill(0));
+  const actualCounts = Array.from({length:5},()=>Array(5).fill(0));
+  const accCalled = Array.from({length:5},()=>Array(5).fill(0));
+  const accOnTarget = Array.from({length:5},()=>Array(5).fill(0));
+  pitches.forEach(p=>{
+    calledCounts[p.calledRow][p.calledCol]++;
+    actualCounts[p.actualRow][p.actualCol]++;
+    accCalled[p.calledRow][p.calledCol]++;
+    if(p.onTarget) accOnTarget[p.calledRow][p.calledCol]++;
+  });
+
+  const grid = document.getElementById('heatmap-grid');
+  grid.innerHTML = '';
+  let maxVal = 1;
+  if(heatmapMode==='called') maxVal = Math.max(1, ...calledCounts.flat());
+  if(heatmapMode==='actual') maxVal = Math.max(1, ...actualCounts.flat());
+
+  for(let r=0;r<5;r++){
+    for(let c=0;c<5;c++){
+      const cell = document.createElement('div');
+      cell.className = 'heat-cell' + (inZoneCore(r,c) ? ' core' : '');
+      let text = '';
+      let alpha = 0;
+      let base = '30,43,34';
+      if(heatmapMode==='called'){
+        const v = calledCounts[r][c];
+        alpha = v/maxVal; base='181,101,29'; text = v>0 ? v : '';
+      } else if(heatmapMode==='actual'){
+        const v = actualCounts[r][c];
+        alpha = v/maxVal; base='168,50,38'; text = v>0 ? v : '';
+      } else {
+        const n = accCalled[r][c];
+        if(n>0){
+          const pct = accOnTarget[r][c]/n;
+          alpha = pct; base='63,107,52';
+          text = Math.round(pct*100)+'%';
+        } else { alpha = 0; text=''; }
+      }
+      cell.style.backgroundColor = alpha>0 ? `rgba(${base}, ${Math.max(alpha,0.12).toFixed(2)})` : 'rgba(30,43,34,0.04)';
+      cell.textContent = text;
+      grid.appendChild(cell);
+    }
+  }
+
+  const captions = {
+    called: 'How often each spot was called.',
+    actual: 'Where pitches actually landed.',
+    accuracy: 'On-target % for pitches called to that spot (blank = never called there).'
+  };
+  document.getElementById('heatmap-caption').textContent = captions[heatmapMode];
+}
+
+/* ---------------- CSV / Email ---------------- */
+function exportCSV(){
+  const p = state.pitcher;
+  const header = ['Pitch#','Pitcher','PitcherNum','PitchType','LocationCalled','LocationActual','OnTarget'];
+  const rows = state.pitches.map(pt => [pt.n, p.name, p.number, pt.type, pt.calledLabel, pt.actualLabel, pt.onTarget?'Y':'N']);
+  const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = ((p.name||'pitcher').replace(/\s+/g,'_')) + '_accuracy_log_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  flashToast('CSV downloaded');
+}
+function emailRecap(){
+  openModal('Email recap', [{id:'em-addr', label:'Coach email', placeholder:'coach@example.com', type:'email'}], (vals)=>{
+    if(!vals['em-addr']) return;
+    const total = state.pitches.length;
+    const onTargetPct = total ? Math.round((state.pitches.filter(p=>p.onTarget).length/total)*100) : 0;
+    const body = ['Accuracy Recap','Pitcher: '+displayPitcher(),'Game: '+(state.gameLabel||'Untitled game'),'','Total pitches: '+total,'On-target: '+onTargetPct+'%'].join('\n');
+    const subject = encodeURIComponent('Accuracy Recap — ' + displayPitcher());
+    window.location.href = 'mailto:' + encodeURIComponent(vals['em-addr']) + '?subject=' + subject + '&body=' + encodeURIComponent(body);
+    flashToast('Opening Mail — attach the CSV if you exported one');
+  }, 'Open in Mail');
+}
+function newGame(){
+  openModal('Start a new game?', [], ()=>{
+    state.pitches = [];
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+    showScreen('screen-setup');
+  }, 'Start new game', 'This clears the current log — export CSV first if you need it.');
+}
+</script>
+</body>
+</html>
