@@ -145,7 +145,7 @@
       </div>
       <div class="brand-eyebrow">Mockup · Quick Accuracy Tracker</div>
       <h1 class="brand-title">Call it.<br>Track it.<br>See it.</h1>
-      <p class="brand-sub">Just command &amp; accuracy — no counts, no lineup. One screen, two taps per pitch.</p>
+      <p class="brand-sub">3⬆3⬇</p>
 
       <div class="field-row">
         <div class="field">
@@ -259,6 +259,7 @@
 
       <div class="report-actions">
         <button class="primary-btn" onclick="exportCSV()">Export CSV</button>
+        <button class="ghost-btn" onclick="exportHeatmapImage()">Download Heatmap Image (PNG)</button>
         <button class="ghost-btn" onclick="emailRecap()">Email recap to coach</button>
         <button class="ghost-btn" onclick="backToGame()">← Back to game (keep tracking)</button>
         <button class="ghost-btn" onclick="newGame()">Start a new game</button>
@@ -579,24 +580,28 @@ function setHeatmapMode(mode){
   renderHeatmap();
 }
 
-function renderHeatmap(){
-  const pitches = state.pitches;
+/* ---------------- Shared heatmap data ---------------- */
+function computeHeatmapMatrices(){
   const calledCounts = Array.from({length:5},()=>Array(5).fill(0));
   const actualCounts = Array.from({length:5},()=>Array(5).fill(0));
   const accCalled = Array.from({length:5},()=>Array(5).fill(0));
   const accOnTarget = Array.from({length:5},()=>Array(5).fill(0));
-  pitches.forEach(p=>{
+  state.pitches.forEach(p=>{
     calledCounts[p.calledRow][p.calledCol]++;
     actualCounts[p.actualRow][p.actualCol]++;
     accCalled[p.calledRow][p.calledCol]++;
     if(p.onTarget) accOnTarget[p.calledRow][p.calledCol]++;
   });
+  return {calledCounts, actualCounts, accCalled, accOnTarget};
+}
 
+function renderHeatmap(){
+  const m = computeHeatmapMatrices();
   const grid = document.getElementById('heatmap-grid');
   grid.innerHTML = '';
   let maxVal = 1;
-  if(heatmapMode==='called') maxVal = Math.max(1, ...calledCounts.flat());
-  if(heatmapMode==='actual') maxVal = Math.max(1, ...actualCounts.flat());
+  if(heatmapMode==='called') maxVal = Math.max(1, ...m.calledCounts.flat());
+  if(heatmapMode==='actual') maxVal = Math.max(1, ...m.actualCounts.flat());
 
   for(let r=0;r<5;r++){
     for(let c=0;c<5;c++){
@@ -606,15 +611,15 @@ function renderHeatmap(){
       let alpha = 0;
       let base = '30,43,34';
       if(heatmapMode==='called'){
-        const v = calledCounts[r][c];
+        const v = m.calledCounts[r][c];
         alpha = v/maxVal; base='181,101,29'; text = v>0 ? v : '';
       } else if(heatmapMode==='actual'){
-        const v = actualCounts[r][c];
+        const v = m.actualCounts[r][c];
         alpha = v/maxVal; base='168,50,38'; text = v>0 ? v : '';
       } else {
-        const n = accCalled[r][c];
+        const n = m.accCalled[r][c];
         if(n>0){
-          const pct = accOnTarget[r][c]/n;
+          const pct = m.accOnTarget[r][c]/n;
           alpha = pct; base='63,107,52';
           text = Math.round(pct*100)+'%';
         } else { alpha = 0; text=''; }
@@ -633,29 +638,155 @@ function renderHeatmap(){
   document.getElementById('heatmap-caption').textContent = captions[heatmapMode];
 }
 
-/* ---------------- CSV / Email ---------------- */
+/* ---------------- CSV / Image / Email ---------------- */
+const HEAT_ROW_LABELS = ['High (ball)','High','Middle','Low','Low (ball)'];
+const HEAT_COL_LABELS = ['In (ball)','In','Middle','Away','Away (ball)'];
+
 function exportCSV(){
   const p = state.pitcher;
   const header = ['Pitch#','Pitcher','PitcherNum','PitchType','LocationCalled','LocationActual','OnTarget'];
   const rows = state.pitches.map(pt => [pt.n, p.name, p.number, pt.type, pt.calledLabel, pt.actualLabel, pt.onTarget?'Y':'N']);
-  const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  let csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+
+  const m = computeHeatmapMatrices();
+  function matrixCsv(title, matrix){
+    const lines = [`"${title}"`];
+    lines.push(['""', ...HEAT_COL_LABELS.map(c=>`"${c}"`)].join(','));
+    for(let r=0;r<5;r++){
+      const row = [`"${HEAT_ROW_LABELS[r]}"`];
+      for(let c=0;c<5;c++) row.push(`"${matrix[r][c]}"`);
+      lines.push(row.join(','));
+    }
+    return lines.join('\n');
+  }
+  const calledM = m.calledCounts.map(row=>row.map(v=>v||''));
+  const actualM = m.actualCounts.map(row=>row.map(v=>v||''));
+  const accM = m.accCalled.map((row,r)=>row.map((n,c)=> n>0 ? Math.round(m.accOnTarget[r][c]/n*100)+'%' : ''));
+  csv += '\n\n' + matrixCsv('Heatmap — Called Location Frequency', calledM);
+  csv += '\n\n' + matrixCsv('Heatmap — Actual Location Frequency', actualM);
+  csv += '\n\n' + matrixCsv('Heatmap — On-Target Accuracy %', accM);
+
   const blob = new Blob([csv], {type:'text/csv'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = ((p.name||'pitcher').replace(/\s+/g,'_')) + '_accuracy_log_' + new Date().toISOString().slice(0,10) + '.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  flashToast('CSV downloaded');
+  flashToast('CSV downloaded (includes heatmap tables)');
+}
+
+function exportHeatmapImage(){
+  const m = computeHeatmapMatrices();
+  const modes = [
+    {key:'called', title:'Called Location Frequency', base:[181,101,29]},
+    {key:'actual', title:'Actual Location Frequency', base:[168,50,38]},
+    {key:'accuracy', title:'On-Target Accuracy %', base:[63,107,52]}
+  ];
+  const cell = 58, pad = 18, gridSize = 5*cell;
+  const blockH = 32 + gridSize + pad;
+  const canvas = document.createElement('canvas');
+  canvas.width = gridSize + pad*2;
+  canvas.height = blockH*3 + pad + 40;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#F7F3E8'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1E2B22'; ctx.font = '700 16px Arial';
+  ctx.fillText(displayPitcher() + ' — ' + (state.gameLabel || 'Untitled game'), canvas.width/2, 22);
+
+  let y = 40 + pad;
+  modes.forEach(mode=>{
+    ctx.fillStyle = '#1E2B22'; ctx.font = '600 14px Arial';
+    ctx.fillText(mode.title, canvas.width/2, y + 12);
+    const gridTop = y + 30;
+    let maxVal = 1;
+    if(mode.key==='called') maxVal = Math.max(1, ...m.calledCounts.flat());
+    if(mode.key==='actual') maxVal = Math.max(1, ...m.actualCounts.flat());
+    for(let r=0;r<5;r++){
+      for(let c=0;c<5;c++){
+        let alpha=0, label='';
+        if(mode.key==='called'){ const v=m.calledCounts[r][c]; alpha=v/maxVal; label = v>0?String(v):''; }
+        else if(mode.key==='actual'){ const v=m.actualCounts[r][c]; alpha=v/maxVal; label = v>0?String(v):''; }
+        else { const n=m.accCalled[r][c]; if(n>0){ const pct=m.accOnTarget[r][c]/n; alpha=pct; label=Math.round(pct*100)+'%'; } }
+        const x = pad + c*cell, yy = gridTop + r*cell, w = cell-3, h = cell-3;
+        ctx.fillStyle = alpha>0 ? `rgba(${mode.base.join(',')}, ${Math.max(alpha,0.15).toFixed(2)})` : 'rgba(30,43,34,0.05)';
+        ctx.fillRect(x,yy,w,h);
+        if(r>=1&&r<=3&&c>=1&&c<=3){
+          ctx.strokeStyle='rgba(30,43,34,0.4)'; ctx.lineWidth=2; ctx.setLineDash([4,3]);
+          ctx.strokeRect(x,yy,w,h); ctx.setLineDash([]);
+        }
+        if(label){ ctx.fillStyle='#1E2B22'; ctx.font='600 13px Arial'; ctx.fillText(label, x+w/2, yy+h/2); }
+      }
+    }
+    y += blockH;
+  });
+
+  canvas.toBlob(blob=>{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = ((state.pitcher.name||'pitcher').replace(/\s+/g,'_')) + '_heatmaps_' + new Date().toISOString().slice(0,10) + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    flashToast('Heatmap image downloaded');
+  });
+}
+
+function padCol(str, len){
+  str = String(str);
+  return str.length >= len ? str.slice(0, len-1)+' ' : str.padEnd(len,' ');
+}
+function buildTypeBreakdownText(){
+  const lines = [padCol('Type',13)+padCol('#Thrown',9)+'OnTarget%'];
+  lines.push('-'.repeat(32));
+  state.activeTypes.forEach(t=>{
+    const rows = state.pitches.filter(p=>p.type===t);
+    if(rows.length===0) return;
+    const pct = Math.round((rows.filter(p=>p.onTarget).length/rows.length)*100);
+    lines.push(padCol(t,13)+padCol(String(rows.length),9)+pct+'%');
+  });
+  return lines.join('\n');
+}
+function buildPitchTableText(){
+  const CAP = 25;
+  const cols = [['#',4],['Type',11],['Called',17],['Actual',17],['OK',3]];
+  const lines = [cols.map(c=>padCol(c[0],c[1])).join('')];
+  lines.push(cols.map(c=>'-'.repeat(c[1]-1)+' ').join(''));
+  state.pitches.slice(0,CAP).forEach(p=>{
+    lines.push([padCol(p.n,4), padCol(p.type,11), padCol(p.calledLabel,17), padCol(p.actualLabel,17), padCol(p.onTarget?'Y':'N',3)].join(''));
+  });
+  if(state.pitches.length > CAP){
+    lines.push('...and ' + (state.pitches.length - CAP) + ' more pitches — see attached CSV for the complete log.');
+  }
+  return lines.join('\n');
+}
+function buildEmailBody(){
+  const total = state.pitches.length;
+  const onTargetPct = total ? Math.round((state.pitches.filter(p=>p.onTarget).length/total)*100) : 0;
+  const lines = [
+    'Accuracy Recap',
+    'Pitcher: ' + displayPitcher(),
+    'Game: ' + (state.gameLabel || 'Untitled game'),
+    'Date: ' + new Date().toLocaleDateString(),
+    '',
+    'Total pitches: ' + total,
+    'On-target: ' + onTargetPct + '%',
+    '',
+    'By pitch type:',
+    buildTypeBreakdownText(),
+    '',
+    'Pitch-by-pitch:',
+    buildPitchTableText(),
+    '',
+    'Full CSV (with heatmap tables) and a heatmap image were exported separately from the app — attach both to this email if you want the complete picture.'
+  ];
+  return lines.join('\n');
 }
 function emailRecap(){
   openModal('Email recap', [{id:'em-addr', label:'Coach email', placeholder:'coach@example.com', type:'email'}], (vals)=>{
     if(!vals['em-addr']) return;
-    const total = state.pitches.length;
-    const onTargetPct = total ? Math.round((state.pitches.filter(p=>p.onTarget).length/total)*100) : 0;
-    const body = ['Accuracy Recap','Pitcher: '+displayPitcher(),'Game: '+(state.gameLabel||'Untitled game'),'','Total pitches: '+total,'On-target: '+onTargetPct+'%'].join('\n');
     const subject = encodeURIComponent('Accuracy Recap — ' + displayPitcher());
-    window.location.href = 'mailto:' + encodeURIComponent(vals['em-addr']) + '?subject=' + subject + '&body=' + encodeURIComponent(body);
-    flashToast('Opening Mail — attach the CSV if you exported one');
+    const body = encodeURIComponent(buildEmailBody());
+    window.location.href = 'mailto:' + encodeURIComponent(vals['em-addr']) + '?subject=' + subject + '&body=' + body;
+    flashToast('Opening Mail — attach the CSV/PNG if you exported them');
   }, 'Open in Mail');
 }
 function newGame(){
