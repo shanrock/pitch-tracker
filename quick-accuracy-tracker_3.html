@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Quick Accuracy Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-base: #F7F3E8; --bg-track: #EEF2F7; --card: #FFFFFF; --card-2: #F1ECDC;
+    --ink: #1E2B22; --ink-dim: rgba(30,43,34,0.62); --ink-faint: rgba(30,43,34,0.16);
+    --clay: #B5651D; --clay-dark: #8A4B15;
+    --grass: #3F6B34; --grass-dark: #2B4C24;
+    --mustard: #C9A227; --mustard-dark: #8C6608;
+    --brick: #A83226; --brick-dark: #7A241A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{height:100%;}
+  body{margin:0; background:var(--bg-base); font-family:'Inter', sans-serif; color:var(--ink); display:flex; justify-content:center;}
+  #app{width:100%; max-width:520px; min-height:100vh; display:flex; flex-direction:column; background:var(--bg-base); border-left:1px solid rgba(0,0,0,0.06); border-right:1px solid rgba(0,0,0,0.06);}
+  .screen{display:none; flex-direction:column; flex:1; min-height:100vh;}
+  .screen.active{display:flex;}
+  #screen-track.active{background:var(--bg-track);}
+
+  .topbar{padding:10px 16px 8px; border-bottom:1px dashed var(--ink-faint); display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .topbar .who{display:flex; flex-direction:column; line-height:1.2; min-width:0;}
+  .topbar .who .name{font-weight:800; font-size:15px;}
+  .topbar .who .sub{font-size:10.5px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .topbar .who .sub button{background:none;border:none;color:var(--clay-dark);font-family:inherit;font-size:10.5px;padding:0; text-decoration:underline; cursor:pointer; font-weight:700;}
+  .topbar-actions{display:flex; gap:6px;}
+  .icon-btn{background:var(--card); border:1px solid var(--ink-faint); color:var(--ink); border-radius:8px; padding:7px 9px; font-family:'Inter'; font-size:10.5px; font-weight:700; cursor:pointer; white-space:nowrap;}
+  .icon-btn:active{transform:scale(0.96);}
+
+  .setup-wrap{flex:1; display:flex; flex-direction:column; padding:26px 22px;}
+  .resume-banner{display:none; background:var(--card); border:1px solid var(--clay); border-radius:12px; padding:14px 16px; margin-bottom:20px;}
+  .resume-banner .rb-title{font-weight:800; font-size:13px; margin-bottom:3px;}
+  .resume-banner .rb-sub{font-size:11.5px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace; margin-bottom:10px;}
+  .resume-banner .rb-actions{display:flex; gap:8px;}
+  .resume-banner .rb-actions button{flex:1; padding:9px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; border:1px solid var(--ink-faint);}
+  .rb-resume{background:var(--clay); color:#FFF8EF; border-color:var(--clay-dark) !important;}
+  .rb-discard{background:var(--card);}
+  .brand-eyebrow{font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.18em; color:var(--clay-dark); text-transform:uppercase; margin-bottom:6px; font-weight:700;}
+  .brand-title{font-family:'Teko', sans-serif; font-weight:600; font-size:42px; line-height:.95; margin:0 0 4px; color:var(--ink);}
+  .brand-sub{color:var(--ink-dim); font-size:13px; margin:0 0 22px; max-width:34ch;}
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-dim); margin-bottom:6px; font-family:'IBM Plex Mono', monospace; font-weight:600;}
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+  input[type=text], input[type=number], input[type=email]{width:100%; background:var(--card); border:1px solid var(--ink-faint); color:var(--ink); border-radius:8px; padding:12px; font-size:15px; font-family:'Inter';}
+  input:focus{outline:2px solid var(--clay); outline-offset:1px;}
+  .primary-btn{margin-top:10px; width:100%; background:var(--clay); color:#FFF8EF; border:none; border-radius:10px; padding:16px; font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 4px 0 #7A430F;}
+  .primary-btn:active{transform:translateY(2px); box-shadow:0 2px 0 #7A430F;}
+  .ghost-btn{width:100%; background:var(--card); border:1px solid var(--ink-faint); color:var(--ink-dim); border-radius:10px; padding:13px; font-size:13px; font-weight:700; cursor:pointer; margin-top:10px;}
+  .ghost-btn:active{transform:scale(0.98);}
+
+  .pitch-chip-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;}
+  .pitch-chip{background:var(--card); border:1px solid var(--ink-faint); color:var(--ink); border-radius:9px; padding:12px 8px; font-size:13.5px; font-weight:700; text-align:center; cursor:pointer;}
+  .pitch-chip.selected{background:var(--clay); color:#FFF8EF; border-color:var(--clay-dark);}
+  .field-hint{font-size:11px; color:var(--ink-dim); margin:-8px 0 14px;}
+
+  .body-scroll{flex:1; overflow-y:auto; padding:8px 16px 20px;}
+  .section-label{font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-dim); margin:8px 0 5px; display:flex; align-items:center; gap:8px; font-weight:600;}
+  .section-label .line{flex:1; height:1px; background:var(--ink-faint);}
+
+  .pitch-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;}
+  .pitch-btn{background:var(--card); border:1px solid var(--ink-faint); color:var(--ink); border-radius:9px; padding:9px 4px; font-size:12.5px; font-weight:700; cursor:pointer; text-align:center;}
+  .pitch-btn:active{transform:scale(.96);}
+  .pitch-btn.selected{background:var(--clay); color:#FFF8EF; border-color:var(--clay-dark);}
+
+  .scoreboard{display:flex; justify-content:space-between; align-items:flex-start; padding:4px 16px 2px;}
+  .scoreboard .count{font-family:'Teko', sans-serif; font-weight:700; font-size:34px; line-height:.8;}
+  .scoreboard .count .b{color:var(--mustard-dark);}
+  .scoreboard .count .dash{color:var(--ink-dim); font-size:24px;}
+  .scoreboard .count .s{color:var(--brick-dark);}
+  .scoreboard .count-lbl{font-size:9px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace; text-transform:uppercase; letter-spacing:.06em; margin-top:1px;}
+  .scoreboard .meta{text-align:right; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-dim);}
+  .scoreboard .meta b{color:var(--ink);}
+  .scoreboard .lineup-controls{display:flex; gap:6px; margin-top:4px; justify-content:flex-end;}
+  .scoreboard .lineup-controls .icon-btn{padding:5px 8px; font-size:10px;}
+
+  .pitch-count-banner{display:flex; align-items:baseline; justify-content:center; gap:6px; margin:0;}
+  .pitch-count-banner .num{font-family:'Teko', sans-serif; font-weight:700; font-size:26px; line-height:.8;}
+  .pitch-count-banner .lbl{font-size:9.5px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace; text-transform:uppercase; letter-spacing:.06em;}
+
+  .zone-wrap{display:flex; justify-content:center; margin:4px 0 0;}
+  .zone-grid{display:grid; grid-template-columns:repeat(5, 1fr); grid-template-rows:repeat(5, 1fr); width:100%; max-width:360px; aspect-ratio:1/1; gap:5px; padding:7px; background:rgba(0,0,0,0.045); border-radius:13px;}
+  .zone-cell{background:rgba(30,43,34,0.05); border-radius:6px; cursor:pointer; min-height:40px; transition:background-color .12s ease;}
+  .zone-cell.core{border:2px dashed rgba(30,43,34,0.4); background:rgba(30,43,34,0.09);}
+  .zone-cell:active{transform:scale(.94);}
+  .zone-cell.called{background:var(--mustard) !important; border-color:var(--mustard-dark) !important;}
+  .zone-cell.actual{background:var(--brick) !important; border-color:var(--brick-dark) !important;}
+  .zone-cell.ontarget{background:var(--grass) !important; border-color:var(--grass-dark) !important;}
+  .disabled-veil{opacity:.35; pointer-events:none;}
+  .zone-hint{text-align:center; font-size:10px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace; margin-top:4px;}
+  .zone-legend{display:flex; justify-content:center; gap:10px; margin-top:4px; font-size:9.5px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace;}
+  .zone-legend span{display:inline-flex; align-items:center; gap:4px;}
+  .swatch{width:8px; height:8px; border-radius:2px; display:inline-block;}
+
+  .result-row{display:flex; flex-direction:row; gap:5px; margin-top:5px;}
+  .result-btn{flex:1; border-radius:9px; padding:9px 2px; font-weight:800; font-size:11.5px; cursor:pointer; text-align:center; border:2px solid transparent;}
+  .result-btn:active{transform:scale(.96);}
+  .rb-ball{background:#FBEBBB; color:var(--mustard-dark); border-color:var(--mustard);}
+  .rb-strike{background:#DCEBD3; color:var(--grass-dark); border-color:var(--grass);}
+  .rb-inplay{background:#F3E3D8; color:var(--brick-dark); border-color:var(--brick);}
+  .rb-hbp{background:#F2E1C9; color:var(--clay-dark); border-color:var(--clay);}
+  .subtype-row{display:none; gap:5px; margin-top:5px;}
+  .subtype-btn{flex:1; background:var(--card-2); border:1px solid var(--ink-faint); color:var(--ink); border-radius:9px; padding:9px 4px; font-size:11.5px; font-weight:700; text-align:center; cursor:pointer;}
+  .subtype-btn:active{transform:scale(.96);}
+
+  .log-strip{display:flex; gap:6px; overflow-x:auto; padding:2px 2px 4px;}
+  .log-chip{flex:0 0 auto; font-family:'IBM Plex Mono', monospace; font-size:10px; padding:5px 7px; border-radius:6px; border:1px solid var(--ink-faint); color:var(--ink-dim); white-space:nowrap; background:var(--card);}
+  .log-chip.hit{color:var(--grass-dark); border-color:var(--grass);}
+  .log-chip.miss{color:var(--brick-dark); border-color:var(--brick);}
+  .empty-log{color:var(--ink-dim); font-size:12px; text-align:center; padding:10px 0;}
+
+  .report-header{padding:20px 20px 6px;}
+  .report-header .eyebrow{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--clay-dark); letter-spacing:.12em; text-transform:uppercase; font-weight:700;}
+  .report-header h1{font-family:'Teko', sans-serif; font-weight:600; font-size:36px; margin:2px 0 2px; line-height:1;}
+  .report-header .sub{font-size:12px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace;}
+
+  .pitcher-block{margin-bottom:6px;}
+  .pitcher-block-head{padding:0 20px; font-family:'Teko', sans-serif; font-size:22px; font-weight:600; color:var(--ink); margin-top:14px;}
+  .stat-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:10px 20px 6px;}
+  .stat-card{background:var(--card); border:1px solid var(--ink-faint); border-radius:10px; padding:12px 10px; text-align:center;}
+  .stat-card .val{font-family:'Teko', sans-serif; font-size:30px; font-weight:600; line-height:1;}
+  .stat-card .lbl{font-size:9.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.05em; margin-top:2px;}
+
+  .insights{margin:8px 20px 4px; padding:12px 14px; border-radius:10px; background:#FBEEDC; border:1px solid rgba(181,101,29,0.35);}
+  .insights .h{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--clay-dark); text-transform:uppercase; letter-spacing:.07em; margin-bottom:6px; font-weight:700;}
+  .insights ul{margin:0; padding-left:16px; font-size:12px; line-height:1.55; color:var(--ink);}
+
+  .table-wrap{margin:10px 20px 10px; border:1px solid var(--ink-faint); border-radius:10px; overflow:hidden; background:var(--card);}
+  table{width:100%; border-collapse:collapse; font-family:'IBM Plex Mono', monospace; font-size:11px;}
+  th, td{padding:8px; text-align:left; border-bottom:1px solid var(--ink-faint); white-space:nowrap;}
+  th{background:rgba(30,43,34,0.05); font-weight:700; color:var(--ink-dim); text-transform:uppercase; font-size:9.5px; letter-spacing:.04em;}
+  tr:last-child td{border-bottom:none;}
+  .table-scroll{overflow-x:auto;}
+
+  .toggle-row{display:flex; gap:6px; margin:0 20px 8px; flex-wrap:wrap;}
+  .toggle-row button{flex:1; min-width:70px; padding:8px 6px; border-radius:8px; border:1px solid var(--ink-faint); background:var(--card); color:var(--ink-dim); font-size:11px; font-weight:700; cursor:pointer;}
+  .toggle-row button.active{background:var(--ink); color:#FBF7EE; border-color:var(--ink);}
+
+  .heatmap-grid{display:grid; grid-template-columns:repeat(5,1fr); grid-template-rows:repeat(5,1fr); gap:5px; margin:0 20px 8px; aspect-ratio:1/1; padding:8px; background:rgba(0,0,0,0.04); border-radius:12px;}
+  .heat-cell{border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono', monospace; font-size:10.5px; font-weight:600; color:var(--ink); min-height:44px;}
+  .heat-cell.core{border:2px dashed rgba(30,43,34,0.3);}
+  .heatmap-caption{font-size:11px; color:var(--ink-dim); text-align:center; margin:0 20px 4px; font-family:'IBM Plex Mono', monospace;}
+
+  .report-actions{padding:16px 20px 26px; display:flex; flex-direction:column; gap:10px;}
+  .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(10px); background:var(--grass-dark); color:#FFF8EF; font-weight:700; font-size:13px; padding:10px 16px; border-radius:8px; opacity:0; pointer-events:none; transition:all .25s ease; max-width:86%; text-align:center; z-index:50;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .field-error input{border-color:var(--brick) !important; animation:shake .3s;}
+  @keyframes shake{25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+
+  .modal-overlay{position:fixed; inset:0; background:rgba(20,25,15,0.45); display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:80;}
+  .modal-overlay.show{opacity:1; pointer-events:auto;}
+  .modal-card{width:100%; max-width:430px; background:var(--bg-base); border-radius:16px 16px 0 0; padding:20px 20px 26px; transform:translateY(12px); transition:transform .2s ease;}
+  .modal-overlay.show .modal-card{transform:translateY(0);}
+  .modal-card h3{font-family:'Teko', sans-serif; font-size:24px; font-weight:600; margin:0 0 12px;}
+  .modal-actions{display:flex; gap:10px; margin-top:6px;}
+
+  .batter-card{background:var(--card); border:1px solid var(--ink-faint); border-radius:12px; margin:0 20px 14px; overflow:hidden;}
+  .batter-card-head{padding:12px 14px; border-bottom:1px solid var(--ink-faint); background:rgba(30,43,34,0.04);}
+  .batter-card-head .bt{font-weight:800; font-size:14px;}
+  .batter-card-head .bs{font-size:10.5px; color:var(--ink-dim); font-family:'IBM Plex Mono', monospace; margin-top:2px;}
+  .batter-stat-chips{display:flex; flex-wrap:wrap; gap:6px; padding:10px 14px;}
+  .batter-stat-chip{font-family:'IBM Plex Mono', monospace; font-size:10.5px; padding:5px 9px; border-radius:6px; background:var(--card-2); border:1px solid var(--ink-faint); color:var(--ink);}
+  .pa-block{border-top:1px solid var(--ink-faint);}
+  .pa-head{display:flex; justify-content:space-between; align-items:center; padding:8px 14px; background:rgba(30,43,34,0.045); gap:8px;}
+  .pa-head .pa-label{font-family:'Teko', sans-serif; font-size:15px; font-weight:600; color:var(--ink);}
+  .pa-head .pa-outcome{font-family:'IBM Plex Mono', monospace; font-size:10px; font-weight:700; padding:3px 9px; border-radius:6px; background:var(--card-2); color:var(--ink-dim); white-space:nowrap;}
+  .pitch-row{padding:8px 14px; border-top:1px dashed var(--ink-faint); font-size:11.5px;}
+  .pitch-row-main{display:flex; align-items:center; gap:7px; font-family:'IBM Plex Mono', monospace; flex-wrap:wrap;}
+  .mp-num{color:var(--ink-dim); min-width:20px;}
+  .mp-type{font-weight:700; min-width:32px;}
+  .mp-loc{color:var(--ink-dim); flex:1; min-width:130px; font-size:10.5px;}
+  .mp-target{font-size:9px; padding:2px 6px; border-radius:5px; font-weight:700; white-space:nowrap;}
+  .mp-target.good{background:rgba(63,107,52,0.15); color:var(--grass-dark);}
+  .mp-target.bad{background:rgba(168,50,38,0.12); color:var(--brick-dark);}
+  .mp-result{font-size:10px; font-weight:800; padding:3px 9px; border-radius:6px; white-space:nowrap;}
+  .mp-result.res-ball{background:#FBEBBB; color:var(--mustard-dark);}
+  .mp-result.res-strike{background:#DCEBD3; color:var(--grass-dark);}
+  .mp-result.res-hbp{background:#F2E1C9; color:var(--clay-dark);}
+  .mp-result.res-inplay{background:var(--brick); color:#FFF8EF;}
+  .mini-row{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; align-items:center;}
+  .mini-row .mini-lbl{font-family:'IBM Plex Mono', monospace; font-size:9.5px; color:var(--ink-dim); margin-right:2px;}
+  .dir-mini-btn{font-family:'IBM Plex Mono', monospace; font-size:10px; padding:5px 8px; border-radius:6px; border:1px solid var(--ink-faint); background:var(--card-2); color:var(--ink-dim); cursor:pointer;}
+  .dir-mini-btn.selected{background:var(--clay); color:#FFF8EF; border-color:var(--clay-dark);}
+  .empty-batters{color:var(--ink-dim); font-size:13px; text-align:center; padding:40px 20px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== SETUP ===================== -->
+  <div class="screen active" id="screen-setup">
+    <div class="setup-wrap">
+      <div class="resume-banner" id="resume-banner">
+        <div class="rb-title">Unfinished game found</div>
+        <div class="rb-sub" id="resume-banner-text">—</div>
+        <div class="rb-actions">
+          <button class="rb-resume" onclick="resumeSavedGame()">Resume</button>
+          <button class="rb-discard" onclick="discardSavedGame()">Discard</button>
+        </div>
+      </div>
+      <div class="brand-eyebrow">Quick Accuracy Tracker</div>
+      <h1 class="brand-title">Call it.<br>Track it.<br>See it.</h1>
+      <p class="brand-sub">Command, accuracy, and what happened — organized by batter and by pitcher.</p>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="setup-pname">Pitcher name</label>
+          <input type="text" id="setup-pname" placeholder="e.g. Ava M." />
+        </div>
+        <div class="field" style="max-width:100px;">
+          <label for="setup-pnum">#</label>
+          <input type="number" id="setup-pnum" placeholder="7" />
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="setup-game">Game / opponent (optional)</label>
+          <input type="text" id="setup-game" placeholder="vs Riverside" />
+        </div>
+        <div class="field" style="max-width:120px;">
+          <label for="setup-lineup"># batters</label>
+          <input type="number" id="setup-lineup" placeholder="9" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Which pitches does she throw?</label>
+        <div class="pitch-chip-grid" id="setup-pitch-chips"></div>
+      </div>
+
+      <div class="field">
+        <label for="setup-custom-pitch">Other pitch (optional, free-form)</label>
+        <input type="text" id="setup-custom-pitch" placeholder="e.g. Knuckle-rise" />
+      </div>
+      <div class="field-hint">Pick at least one, or fill in the custom field.</div>
+
+      <button class="primary-btn" onclick="startGame()">Start Tracking</button>
+      <button class="ghost-btn" onclick="goHistory()">View Past Games</button>
+    </div>
+  </div>
+
+  <!-- ===================== TRACK SCREEN (combined) ===================== -->
+  <div class="screen" id="screen-track">
+    <div class="topbar">
+      <div class="who">
+        <div class="name" id="track-pitcher-name">—</div>
+        <div class="sub">
+          <span id="track-game-label">—</span>
+          <button onclick="openChangePitcher()">Change pitcher</button>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" onclick="goBatters()">Batters</button>
+        <button class="icon-btn" onclick="goReport()">End Game</button>
+      </div>
+    </div>
+
+    <div class="scoreboard">
+      <div>
+        <div class="count"><span class="b" id="count-b">0</span><span class="dash">-</span><span class="s" id="count-s">0</span></div>
+        <div class="count-lbl">Ball - Strike</div>
+      </div>
+      <div class="meta">
+        <div>Batter <b id="track-batter-slot">1</b> of <span id="track-lineup-size">9</span></div>
+        <div class="lineup-controls">
+          <button class="icon-btn" onclick="nextBatter()">Next Batter ▸</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pitch-count-banner">
+      <span class="num" id="track-pitch-count">0</span>
+      <span class="lbl">pitches this outing</span>
+    </div>
+
+    <div class="body-scroll">
+      <div class="section-label"><span>1 · Pitch type</span><span class="line"></span></div>
+      <div class="pitch-grid" id="pitch-type-grid"></div>
+
+      <div class="section-label"><span>2 · Tap called, then actual</span><span class="line"></span></div>
+      <div class="zone-wrap">
+        <div class="zone-grid disabled-veil" id="track-zone-grid"></div>
+      </div>
+      <div class="zone-hint" id="zone-hint-text">Pick a pitch type, then tap the called spot.</div>
+      <div class="zone-legend">
+        <span><span class="swatch" style="background:var(--mustard);"></span>Called</span>
+        <span><span class="swatch" style="background:var(--brick);"></span>Actual (miss)</span>
+        <span><span class="swatch" style="background:var(--grass);"></span>On target</span>
+      </div>
+
+      <div class="section-label"><span>3 · What happened</span><span class="line"></span></div>
+      <div class="result-row">
+        <div class="result-btn rb-ball" onclick="selectResultSimple('Ball')">Ball</div>
+        <div class="result-btn rb-strike" onclick="selectResultSimple('Strike')">Strike</div>
+        <div class="result-btn rb-inplay" onclick="revealSubtype()">In Play</div>
+        <div class="result-btn rb-hbp" onclick="selectResultSimple('Hit By Pitch')">HBP</div>
+      </div>
+      <div class="subtype-row" id="subtype-row">
+        <div class="subtype-btn" onclick="selectSubtype('Pop Fly')">Pop Fly</div>
+        <div class="subtype-btn" onclick="selectSubtype('Line Drive')">Line Drive</div>
+        <div class="subtype-btn" onclick="selectSubtype('Ground Ball')">Ground Ball</div>
+      </div>
+
+      <div class="section-label"><span id="log-section-label">Log</span><span class="line"></span></div>
+      <div class="log-strip" id="log-strip"><div class="empty-log">No pitches yet.</div></div>
+    </div>
+  </div>
+
+  <!-- ===================== CHANGE PITCHER ===================== -->
+  <div class="screen" id="screen-changepitcher">
+    <div class="topbar">
+      <div class="who"><div class="name">Change Pitcher</div></div>
+      <button class="icon-btn" onclick="showScreen('screen-track')">Cancel</button>
+    </div>
+    <div class="setup-wrap" style="padding-top:20px;">
+      <div class="field-row">
+        <div class="field">
+          <label for="cp-name">Pitcher name</label>
+          <input type="text" id="cp-name" placeholder="e.g. Ava M." oninput="cpSyncChips()" />
+        </div>
+        <div class="field" style="max-width:100px;">
+          <label for="cp-num">#</label>
+          <input type="number" id="cp-num" placeholder="7" oninput="cpSyncChips()" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Which pitches does she throw?</label>
+        <div class="pitch-chip-grid" id="cp-pitch-chips"></div>
+      </div>
+      <div class="field">
+        <label for="cp-custom">Other pitch (optional, free-form)</label>
+        <input type="text" id="cp-custom" placeholder="e.g. Knuckle-rise" />
+      </div>
+      <div class="field-hint">Switching to a pitcher already used this game auto-fills their pitches. Editing them here updates that pitcher going forward.</div>
+      <button class="primary-btn" onclick="confirmChangePitcher()">Switch Pitcher</button>
+    </div>
+  </div>
+
+  <!-- ===================== BATTER BREAKDOWN ===================== -->
+  <div class="screen" id="screen-batters">
+    <div class="topbar">
+      <div class="who">
+        <div class="name">Batter Breakdown</div>
+        <div class="sub"><span id="batters-sub">—</span></div>
+      </div>
+      <button class="icon-btn" onclick="closeBatters()">Close</button>
+    </div>
+    <div class="body-scroll" style="padding-top:16px;" id="batters-list"></div>
+  </div>
+
+  <!-- ===================== GAME HISTORY ===================== -->
+  <div class="screen" id="screen-history">
+    <div class="topbar">
+      <div class="who"><div class="name">Game History</div></div>
+      <button class="icon-btn" onclick="showScreen('screen-setup')">Close</button>
+    </div>
+    <div class="body-scroll" style="padding-top:16px;" id="history-list"></div>
+  </div>
+
+  <!-- ===================== REPORT ===================== -->
+  <div class="screen" id="screen-report">
+    <div class="body-scroll" style="padding:0;">
+      <div class="report-header">
+        <div class="eyebrow">Post-Game Recap · Accuracy Mode</div>
+        <h1 id="rep-title">Game Recap</h1>
+        <div class="sub" id="rep-sub">—</div>
+      </div>
+
+      <div id="rep-pitchers-container"></div>
+
+      <div class="section-label" style="margin:16px 20px 8px;"><span>By batter (lineup order, all pitchers)</span><span class="line"></span></div>
+      <div class="table-wrap" style="margin-top:0;">
+        <div class="table-scroll">
+          <table id="rep-batter-table">
+            <thead><tr><th>Batter</th><th>PAs</th><th>Pitches</th><th>B</th><th>K</th><th>IP</th><th>HBP</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin:18px 20px 8px;"><span>Heatmap</span><span class="line"></span></div>
+      <div class="toggle-row" id="heatmap-pitcher-toggle"></div>
+      <div class="toggle-row" id="heatmap-mode-toggle">
+        <button data-mode="called" class="active" onclick="setHeatmapMode('called')">Called freq.</button>
+        <button data-mode="actual" onclick="setHeatmapMode('actual')">Actual freq.</button>
+        <button data-mode="accuracy" onclick="setHeatmapMode('accuracy')">Accuracy %</button>
+      </div>
+      <div class="heatmap-grid" id="heatmap-grid"></div>
+      <div class="heatmap-caption" id="heatmap-caption">—</div>
+
+      <div class="section-label" style="margin:16px 20px 8px;"><span>Full pitch log</span><span class="line"></span></div>
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table id="rep-log-table">
+            <thead><tr><th>#</th><th>Pitcher</th><th>Batter</th><th>Type</th><th>Called</th><th>Actual</th><th>OK</th><th>Result</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="report-actions">
+        <button class="ghost-btn" style="margin-top:0;" onclick="goBatters()">View Batter Breakdown</button>
+        <button class="ghost-btn" onclick="goHistory()">View Game History</button>
+        <button class="primary-btn" onclick="exportCSV()">Export CSV</button>
+        <button class="ghost-btn" onclick="exportHeatmapImage()">Download Heatmap Image (PNG)</button>
+        <button class="ghost-btn" onclick="emailRecap()">Email recap to coach</button>
+        <button class="ghost-btn" onclick="backToGame()">← Back to game (keep tracking)</button>
+        <button class="ghost-btn" onclick="newGame()">Start a new game</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal-card">
+    <h3 id="modal-title">Title</h3>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="ghost-btn" style="flex:1; margin-top:0;" onclick="closeModal()">Cancel</button>
+      <button class="primary-btn" style="flex:1; margin-top:0;" id="modal-confirm-btn" onclick="confirmModal()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PITCH_TYPES = ['Fastball','Changeup','Riseball','Dropball','Curveball','Screwball'];
+const DIRECTIONS = ['LF','CF','RF','LIF','CIF','RIF'];
+
+let state = {
+  pitchers: [],
+  currentPitcherIdx: 0,
+  gameLabel: '',
+  lineupSize: 9,
+  batterSlot: 1,
+  atBatId: 1,
+  pitches: [],
+  pendingType: null,
+  pendingCalled: null,
+  pendingActual: null
+};
+let cameFromReport = false;
+let heatmapMode = 'called';
+let heatmapPitcherIdx = 0;
+
+/* ---------------- Zone helpers ---------------- */
+function rowWord(r){ return r<=1 ? 'High' : r>=3 ? 'Low' : 'Middle'; }
+function colWord(c){ return c<=1 ? 'In' : c>=3 ? 'Away' : 'Middle'; }
+function zoneLabel(r,c){
+  const rw = rowWord(r), cw = colWord(c);
+  if(rw==='Middle' && cw==='Middle') return 'Down the Middle';
+  return rw + ' ' + cw;
+}
+function inZoneCore(r,c){ return r>=1 && r<=3 && c>=1 && c<=3; }
+
+/* ---------------- Pitcher identity ---------------- */
+function pitcherKey(name, number){ return (name||'').trim().toLowerCase() + '|' + (number||'').trim(); }
+function getOrCreatePitcherIdx(name, number){
+  const key = pitcherKey(name, number);
+  let idx = state.pitchers.findIndex(p => pitcherKey(p.name,p.number) === key);
+  if(idx === -1){ state.pitchers.push({name: name||'Pitcher', number: number||'', activeTypes: []}); idx = state.pitchers.length-1; }
+  return idx;
+}
+function pitcherObj(idx){ return state.pitchers[idx] || {name:'Pitcher', number:'', activeTypes:[]}; }
+function displayPitcherObj(p){ return (p.number?'#'+p.number+' ':'') + p.name; }
+function currentPitcher(){ return pitcherObj(state.currentPitcherIdx); }
+function displayPitcher(){ return displayPitcherObj(currentPitcher()); }
+function pitchersWithData(){
+  return state.pitchers.map((p,idx)=>idx).filter(idx=> state.pitches.some(pt=>pt.pitcherIdx===idx));
+}
+
+/* ---------------- Modal ---------------- */
+let currentModalFields = [];
+let currentModalConfirm = null;
+function openModal(title, fields, onConfirm, confirmLabel, message){
+  currentModalFields = fields;
+  currentModalConfirm = onConfirm;
+  document.getElementById('modal-title').textContent = title;
+  const body = document.getElementById('modal-body');
+  body.innerHTML = '';
+  if(message){
+    const p = document.createElement('p');
+    p.style.cssText = 'font-size:13px; color:var(--ink-dim); margin:0 0 14px;';
+    p.textContent = message;
+    body.appendChild(p);
+  }
+  fields.forEach(f=>{
+    const wrap = document.createElement('div'); wrap.className = 'field';
+    const lbl = document.createElement('label'); lbl.textContent = f.label;
+    const inp = document.createElement('input'); inp.type = f.type||'text'; inp.id = 'modal-'+f.id; inp.placeholder = f.placeholder||''; inp.value = f.value||'';
+    wrap.appendChild(lbl); wrap.appendChild(inp);
+    body.appendChild(wrap);
+  });
+  document.getElementById('modal-confirm-btn').textContent = confirmLabel || 'Confirm';
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('show'); }
+function confirmModal(){
+  const vals = {};
+  currentModalFields.forEach(f=>{ const el=document.getElementById('modal-'+f.id); vals[f.id]= el? el.value.trim() : ''; });
+  const cb = currentModalConfirm;
+  closeModal();
+  if(cb) cb(vals);
+}
+
+/* ---------------- Pitch chip helpers (shared by setup + change pitcher) ---------------- */
+function renderChipGrid(containerId, selectedList){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  PITCH_TYPES.forEach(t=>{
+    const chip = document.createElement('div');
+    chip.className = 'pitch-chip' + (selectedList.includes(t) ? ' selected' : '');
+    chip.textContent = t;
+    chip.onclick = ()=> chip.classList.toggle('selected');
+    el.appendChild(chip);
+  });
+}
+function readChipSelection(containerId, customFieldId){
+  const selected = Array.from(document.querySelectorAll('#'+containerId+' .pitch-chip.selected')).map(c=>c.textContent);
+  const custom = document.getElementById(customFieldId).value.trim();
+  const types = [...selected];
+  if(custom) types.push(custom);
+  return types;
+}
+
+/* ---------------- Setup ---------------- */
+renderChipGrid('setup-pitch-chips', []);
+
+function startGame(){
+  const pnameEl = document.getElementById('setup-pname');
+  const pnumEl = document.getElementById('setup-pnum');
+  const pname = pnameEl.value.trim();
+  const pnum = pnumEl.value.trim();
+  if(!pname && !pnum){
+    flashToast('Add a pitcher name or number');
+    [pnameEl,pnumEl].forEach(el=>{ el.parentElement.classList.add('field-error'); setTimeout(()=>el.parentElement.classList.remove('field-error'),400); });
+    return;
+  }
+  const activeTypes = readChipSelection('setup-pitch-chips','setup-custom-pitch');
+  if(activeTypes.length === 0){
+    flashToast('Pick at least one pitch, or add a custom one');
+    return;
+  }
+  const lineupVal = parseInt(document.getElementById('setup-lineup').value, 10);
+
+  state.pitchers = [{name: pname || 'Pitcher', number: pnum, activeTypes}];
+  state.currentPitcherIdx = 0;
+  state.gameLabel = document.getElementById('setup-game').value.trim();
+  state.lineupSize = (lineupVal && lineupVal > 0) ? lineupVal : 9;
+  state.batterSlot = 1;
+  state.atBatId = 1;
+  state.gameId = generateGameId();
+  state.createdAt = Date.now();
+  state.pitches = [];
+
+  renderTrackPitchGrid();
+  buildZoneGrid();
+  showScreen('screen-track');
+  refreshTrackScreen();
+}
+
+/* ---------------- Change pitcher screen ---------------- */
+function openChangePitcher(){
+  const cur = currentPitcher();
+  document.getElementById('cp-name').value = cur.name || '';
+  document.getElementById('cp-num').value = cur.number || '';
+  document.getElementById('cp-custom').value = '';
+  renderChipGrid('cp-pitch-chips', (cur.activeTypes||[]).filter(t=>PITCH_TYPES.includes(t)));
+  const customExisting = (cur.activeTypes||[]).find(t=>!PITCH_TYPES.includes(t));
+  if(customExisting) document.getElementById('cp-custom').value = customExisting;
+  showScreen('screen-changepitcher');
+}
+function cpSyncChips(){
+  const name = document.getElementById('cp-name').value.trim();
+  const num = document.getElementById('cp-num').value.trim();
+  if(!name && !num){ renderChipGrid('cp-pitch-chips', []); document.getElementById('cp-custom').value=''; return; }
+  const key = pitcherKey(name, num);
+  const existing = state.pitchers.find(p=>pitcherKey(p.name,p.number)===key);
+  if(existing){
+    renderChipGrid('cp-pitch-chips', (existing.activeTypes||[]).filter(t=>PITCH_TYPES.includes(t)));
+    const customExisting = (existing.activeTypes||[]).find(t=>!PITCH_TYPES.includes(t));
+    document.getElementById('cp-custom').value = customExisting || '';
+  } else {
+    renderChipGrid('cp-pitch-chips', []);
+    document.getElementById('cp-custom').value = '';
+  }
+}
+function confirmChangePitcher(){
+  const name = document.getElementById('cp-name').value.trim();
+  const num = document.getElementById('cp-num').value.trim();
+  if(!name && !num){ flashToast('Add a name or number'); return; }
+  const activeTypes = readChipSelection('cp-pitch-chips','cp-custom');
+  if(activeTypes.length === 0){ flashToast('Pick at least one pitch, or add a custom one'); return; }
+
+  const idx = getOrCreatePitcherIdx(name||'Pitcher', num||'');
+  state.pitchers[idx].activeTypes = activeTypes;
+  state.currentPitcherIdx = idx;
+  renderTrackPitchGrid();
+  refreshTrackScreen();
+  showScreen('screen-track');
+  flashToast('Now tracking ' + displayPitcher());
+}
+
+/* ---------------- Track screen ---------------- */
+function renderTrackPitchGrid(){
+  const el = document.getElementById('pitch-type-grid');
+  el.innerHTML = '';
+  (currentPitcher().activeTypes||[]).forEach(t=>{
+    const b = document.createElement('div');
+    b.className = 'pitch-btn';
+    b.textContent = t;
+    b.onclick = () => selectPitchType(t, b);
+    el.appendChild(b);
+  });
+}
+function selectPitchType(type, el){
+  state.pendingType = type;
+  document.querySelectorAll('#pitch-type-grid .pitch-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('track-zone-grid').classList.remove('disabled-veil');
+  document.getElementById('zone-hint-text').textContent = 'Tap the called spot.';
+}
+
+function buildZoneGrid(){
+  const el = document.getElementById('track-zone-grid');
+  el.innerHTML = '';
+  for(let r=0;r<5;r++){
+    for(let c=0;c<5;c++){
+      const cell = document.createElement('div');
+      cell.className = 'zone-cell' + (inZoneCore(r,c) ? ' core' : '');
+      cell.dataset.row = r; cell.dataset.col = c;
+      cell.onclick = () => onZoneTap(r,c,cell);
+      el.appendChild(cell);
+    }
+  }
+}
+
+function onZoneTap(r,c,cellEl){
+  if(!state.pendingType){ flashToast('Pick a pitch type first'); return; }
+  if(!state.pendingCalled){
+    state.pendingCalled = {row:r, col:c, el:cellEl};
+    cellEl.classList.add('called');
+    document.getElementById('zone-hint-text').textContent = 'Now tap where it actually went.';
+    return;
+  }
+  if(!state.pendingActual){
+    const cz = state.pendingCalled;
+    const onTarget = (cz.row === r && cz.col === c);
+    if(onTarget){ cz.el.classList.remove('called'); cellEl.classList.add('ontarget'); }
+    else { cellEl.classList.add('actual'); }
+    state.pendingActual = {row:r, col:c, onTarget};
+    document.getElementById('track-zone-grid').classList.add('disabled-veil');
+    document.getElementById('zone-hint-text').textContent = 'Now tag what happened below.';
+  }
+}
+
+function selectResultSimple(result){
+  if(!state.pendingActual){ flashToast('Tap the called and actual spots first'); return; }
+  commitPitch(result, '');
+}
+function revealSubtype(){
+  if(!state.pendingActual){ flashToast('Tap the called and actual spots first'); return; }
+  document.getElementById('subtype-row').style.display = 'flex';
+}
+function selectSubtype(subtype){
+  commitPitch('In Play', subtype);
+}
+
+function commitPitch(result, inPlayType){
+  const cz = state.pendingCalled, az = state.pendingActual;
+  const n = state.pitches.length + 1;
+  const abId = state.atBatId;
+  state.pitches.push({
+    n, batterSlot: state.batterSlot, atBatId: abId, pitcherIdx: state.currentPitcherIdx,
+    type: state.pendingType,
+    calledRow: cz.row, calledCol: cz.col, calledLabel: zoneLabel(cz.row, cz.col),
+    actualRow: az.row, actualCol: az.col, actualLabel: zoneLabel(az.row, az.col),
+    onTarget: az.onTarget,
+    result, inPlayType, hitDirection: '', outOnPlay: ''
+  });
+
+  if(result === 'Hit By Pitch'){
+    flashToast('Hit by pitch — next batter up');
+    doAdvanceBatter();
+  } else if(result === 'In Play'){
+    flashToast('Ball in play — next batter up');
+    doAdvanceBatter();
+  } else {
+    const cnt = computeCount(abId);
+    if(cnt.balls >= 4){ flashToast('Walk — next batter up'); doAdvanceBatter(); }
+    else if(cnt.strikes >= 3){ flashToast('Strikeout — next batter up'); doAdvanceBatter(); }
+  }
+
+  setTimeout(()=>{
+    document.querySelectorAll('#track-zone-grid .zone-cell').forEach(cell=>cell.classList.remove('called','actual','ontarget'));
+    document.querySelectorAll('#pitch-type-grid .pitch-btn').forEach(b=>b.classList.remove('selected'));
+    document.getElementById('subtype-row').style.display = 'none';
+    document.getElementById('track-zone-grid').classList.add('disabled-veil');
+    document.getElementById('zone-hint-text').textContent = 'Pick a pitch type, then tap the called spot.';
+    state.pendingType = null;
+    state.pendingCalled = null;
+    state.pendingActual = null;
+    refreshTrackScreen();
+  }, 380);
+}
+
+/* ---------------- Batter / count controls ---------------- */
+function doAdvanceBatter(){
+  state.atBatId += 1;
+  state.batterSlot = state.batterSlot >= state.lineupSize ? 1 : state.batterSlot + 1;
+}
+function nextBatter(){
+  doAdvanceBatter();
+  refreshTrackScreen();
+  flashToast('Next batter — #' + state.batterSlot + ' up');
+}
+function computeCount(atBatId){
+  let balls=0, strikes=0;
+  state.pitches.filter(p=>p.atBatId===atBatId).forEach(p=>{
+    if(p.result==='Ball') balls++;
+    else if(p.result==='Strike') strikes++;
+  });
+  return {balls, strikes};
+}
+
+function refreshTrackScreen(){
+  document.getElementById('track-pitcher-name').textContent = displayPitcher();
+  document.getElementById('track-game-label').textContent = state.gameLabel || 'Untitled game';
+  document.getElementById('track-batter-slot').textContent = state.batterSlot;
+  document.getElementById('track-lineup-size').textContent = state.lineupSize;
+  document.getElementById('track-pitch-count').textContent = state.pitches.filter(p=>p.pitcherIdx===state.currentPitcherIdx).length;
+  document.getElementById('log-section-label').textContent = 'Log (' + state.pitches.length + ')';
+
+  const c = computeCount(state.atBatId);
+  document.getElementById('count-b').textContent = c.balls;
+  document.getElementById('count-s').textContent = c.strikes;
+
+  persistState();
+
+  const strip = document.getElementById('log-strip');
+  if(state.pitches.length === 0){
+    strip.innerHTML = '<div class="empty-log">No pitches yet.</div>';
+  } else {
+    strip.innerHTML = '';
+    state.pitches.slice().reverse().slice(0,14).forEach(p=>{
+      const chip = document.createElement('div');
+      chip.className = 'log-chip ' + (p.onTarget ? 'hit' : 'miss');
+      chip.textContent = '#' + p.n + ' ' + shortType(p.type) + ' · ' + resultCode(p);
+      strip.appendChild(chip);
+    });
+  }
+}
+function shortType(t){ return {'Fastball':'FB','Changeup':'CH','Riseball':'RISE','Dropball':'DROP','Curveball':'CRV','Screwball':'SCRW'}[t] || t; }
+function subtypeAbbrev(t){ return {'Pop Fly':'PF','Line Drive':'LD','Ground Ball':'GB'}[t] || t; }
+function resultCode(p){
+  if(p.result==='Ball') return 'B';
+  if(p.result==='Strike') return 'K';
+  if(p.result==='Hit By Pitch') return 'HBP';
+  if(p.result==='In Play') return 'IP-' + subtypeAbbrev(p.inPlayType);
+  return p.result;
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+let toastTimer;
+function flashToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+/* ---------------- Persistence (IndexedDB — multiple saved games) ---------------- */
+const DB_NAME = 'QuickAccuracyDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'games';
+function openDB(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e)=>{
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(STORE_NAME)){
+        db.createObjectStore(STORE_NAME, {keyPath:'gameId'});
+      }
+    };
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+async function dbSaveGame(gameState){
+  try{
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE_NAME,'readwrite');
+      tx.objectStore(STORE_NAME).put(gameState);
+      tx.oncomplete = ()=>resolve();
+      tx.onerror = ()=>reject(tx.error);
+    });
+  }catch(e){ /* storage unavailable — fail silently */ }
+}
+async function dbGetAllGames(){
+  try{
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE_NAME,'readonly');
+      const req = tx.objectStore(STORE_NAME).getAll();
+      req.onsuccess = ()=>resolve(req.result || []);
+      req.onerror = ()=>reject(req.error);
+    });
+  }catch(e){ return []; }
+}
+async function dbGetGame(gameId){
+  try{
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE_NAME,'readonly');
+      const req = tx.objectStore(STORE_NAME).get(gameId);
+      req.onsuccess = ()=>resolve(req.result || null);
+      req.onerror = ()=>reject(req.error);
+    });
+  }catch(e){ return null; }
+}
+async function dbDeleteGame(gameId){
+  try{
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE_NAME,'readwrite');
+      tx.objectStore(STORE_NAME).delete(gameId);
+      tx.oncomplete = ()=>resolve();
+      tx.onerror = ()=>reject(tx.error);
+    });
+  }catch(e){}
+}
+function generateGameId(){
+  return 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+}
+
+async function persistState(){
+  if(!state.gameId) return;
+  state.updatedAt = Date.now();
+  await dbSaveGame(state);
+}
+async function checkForSavedGame(){
+  const games = await dbGetAllGames();
+  if(!games.length) return;
+  games.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+  const latest = games[0];
+  if(!latest.pitchers || !latest.pitchers.length) return;
+  window.__savedGame = latest;
+  const p = latest.pitchers[latest.currentPitcherIdx || 0] || latest.pitchers[0];
+  const pname = (p.number ? '#'+p.number+' ' : '') + (p.name || 'Pitcher');
+  document.getElementById('resume-banner-text').textContent = pname + ' · ' + (latest.pitches ? latest.pitches.length : 0) + ' pitches logged so far.';
+  document.getElementById('resume-banner').style.display = 'block';
+}
+function resumeSavedGame(){
+  if(!window.__savedGame) return;
+  state = window.__savedGame;
+  renderTrackPitchGrid();
+  buildZoneGrid();
+  showScreen('screen-track');
+  refreshTrackScreen();
+  flashToast('Game resumed');
+}
+async function discardSavedGame(){
+  if(window.__savedGame && window.__savedGame.gameId){ await dbDeleteGame(window.__savedGame.gameId); }
+  document.getElementById('resume-banner').style.display = 'none';
+  window.__savedGame = null;
+  flashToast('Discarded — removed from saved games');
+}
+
+/* ---------------- Game History screen ---------------- */
+async function goHistory(){
+  const games = await dbGetAllGames();
+  games.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+  const list = document.getElementById('history-list');
+  list.innerHTML = '';
+  if(games.length === 0){
+    list.innerHTML = '<div class="empty-batters">No saved games yet.</div>';
+    showScreen('screen-history');
+    return;
+  }
+  games.forEach(g=>{
+    const card = document.createElement('div');
+    card.className = 'batter-card';
+    const dateStr = g.createdAt ? new Date(g.createdAt).toLocaleDateString() : '—';
+    const pitcherNames = (g.pitchers||[]).map(p=>displayPitcherObj(p)).join(', ') || 'Pitcher';
+    card.innerHTML =
+      '<div class="batter-card-head" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">' +
+        '<div class="history-open" style="cursor:pointer; flex:1;">' +
+          '<div class="bt">' + (g.gameLabel || 'Untitled game') + '</div>' +
+          '<div class="bs">' + dateStr + ' · ' + pitcherNames + ' · ' + (g.pitches?g.pitches.length:0) + ' pitches</div>' +
+        '</div>' +
+        '<button class="icon-btn history-delete">Delete</button>' +
+      '</div>';
+    card.querySelector('.history-open').onclick = ()=> openHistoryGame(g.gameId);
+    card.querySelector('.history-delete').onclick = (e)=>{ e.stopPropagation(); deleteHistoryGame(g.gameId); };
+    list.appendChild(card);
+  });
+  showScreen('screen-history');
+}
+async function openHistoryGame(gameId){
+  const g = await dbGetGame(gameId);
+  if(!g) return;
+  state = g;
+  heatmapPitcherIdx = 0;
+  renderTrackPitchGrid();
+  buildZoneGrid();
+  refreshTrackScreen();
+  buildReport();
+  showScreen('screen-report');
+  flashToast('Viewing ' + (g.gameLabel || 'saved game'));
+}
+function deleteHistoryGame(gameId){
+  openModal('Delete this game?', [], async ()=>{
+    await dbDeleteGame(gameId);
+    goHistory();
+  }, 'Delete', 'This permanently removes it from your saved games.');
+}
+checkForSavedGame();
+
+/* ---------------- Batter Breakdown screen ---------------- */
+function goBatters(){
+  cameFromReport = document.getElementById('screen-report').classList.contains('active');
+  buildBatterBreakdown();
+  showScreen('screen-batters');
+}
+function closeBatters(){
+  showScreen(cameFromReport ? 'screen-report' : 'screen-track');
+}
+function slotSummary(slot){
+  const rows = state.pitches.filter(p=>p.batterSlot===slot);
+  const atBats = new Set(rows.map(p=>p.atBatId));
+  const balls = rows.filter(p=>p.result==='Ball').length;
+  const strikes = rows.filter(p=>p.result==='Strike').length;
+  const hbp = rows.filter(p=>p.result==='Hit By Pitch').length;
+  const inPlay = rows.filter(p=>p.result==='In Play');
+  const pf = inPlay.filter(p=>p.inPlayType==='Pop Fly').length;
+  const ld = inPlay.filter(p=>p.inPlayType==='Line Drive').length;
+  const gb = inPlay.filter(p=>p.inPlayType==='Ground Ball').length;
+  const onTargetPct = rows.length ? Math.round((rows.filter(p=>p.onTarget).length/rows.length)*100) : 0;
+  return {slot, rows, timesFaced: atBats.size, pitches: rows.length, balls, strikes, hbp, inPlayN: inPlay.length, pf, ld, gb, onTargetPct};
+}
+function groupByPA(rows){
+  const map = new Map();
+  const order = [];
+  rows.forEach(p=>{
+    if(!map.has(p.atBatId)){ map.set(p.atBatId, []); order.push(p.atBatId); }
+    map.get(p.atBatId).push(p);
+  });
+  return order.map((id,i)=>({paIndex:i+1, atBatId:id, pitches:map.get(id)}));
+}
+function paOrdinal(n){
+  if(n===1) return '1st At-Bat';
+  if(n===2) return '2nd At-Bat';
+  if(n===3) return '3rd At-Bat';
+  return n + 'th At-Bat';
+}
+function paOutcome(paPitches){
+  const last = paPitches[paPitches.length-1];
+  if(last.result==='Hit By Pitch') return 'HBP';
+  if(last.result==='In Play'){
+    let txt = 'In Play' + (last.inPlayType ? ' (' + subtypeAbbrev(last.inPlayType) + ')' : '');
+    if(last.outOnPlay) txt += ' — ' + last.outOnPlay;
+    if(last.hitDirection) txt += ' to ' + last.hitDirection;
+    return txt;
+  }
+  let balls=0, strikes=0;
+  paPitches.forEach(p=>{ if(p.result==='Ball') balls++; else if(p.result==='Strike') strikes++; });
+  if(balls>=4) return 'Walk';
+  if(strikes>=3) return 'Strikeout';
+  return 'In progress';
+}
+function buildBatterBreakdown(){
+  document.getElementById('batters-sub').textContent = (state.gameLabel || 'Untitled game') + ' · all pitchers';
+  const list = document.getElementById('batters-list');
+  list.innerHTML = '';
+  const slotsWithData = [];
+  for(let s=1; s<=state.lineupSize; s++){
+    if(state.pitches.some(p=>p.batterSlot===s)) slotsWithData.push(s);
+  }
+  if(slotsWithData.length === 0){
+    list.innerHTML = '<div class="empty-batters">No pitches logged for any batter yet.</div>';
+    return;
+  }
+  slotsWithData.forEach(slot=>{
+    const sum = slotSummary(slot);
+    const card = document.createElement('div');
+    card.className = 'batter-card';
+    card.innerHTML =
+      '<div class="batter-card-head">' +
+        '<div class="bt">Batter #' + slot + '</div>' +
+        '<div class="bs">' + sum.timesFaced + ' plate appearance' + (sum.timesFaced!==1?'s':'') + ' · ' + sum.pitches + ' pitch' + (sum.pitches!==1?'es':'') + '</div>' +
+      '</div>' +
+      '<div class="batter-stat-chips">' +
+        '<div class="batter-stat-chip">B: ' + sum.balls + '</div>' +
+        '<div class="batter-stat-chip">K: ' + sum.strikes + '</div>' +
+        '<div class="batter-stat-chip">HBP: ' + sum.hbp + '</div>' +
+        '<div class="batter-stat-chip">IP: ' + sum.inPlayN + ' (PF ' + sum.pf + ' / LD ' + sum.ld + ' / GB ' + sum.gb + ')</div>' +
+        '<div class="batter-stat-chip">On target: ' + sum.onTargetPct + '%</div>' +
+      '</div>';
+
+    const pas = groupByPA(sum.rows);
+    pas.forEach(pa=>{
+      const paBlock = document.createElement('div');
+      paBlock.className = 'pa-block';
+      const paHead = document.createElement('div');
+      paHead.className = 'pa-head';
+      paHead.innerHTML = '<span class="pa-label">' + paOrdinal(pa.paIndex) + '</span><span class="pa-outcome">' + paOutcome(pa.pitches) + '</span>';
+      paBlock.appendChild(paHead);
+
+      pa.pitches.forEach(p=>{
+        const row = document.createElement('div');
+        row.className = 'pitch-row';
+        const resClass = p.result==='Ball' ? 'res-ball' : (p.result==='Strike' ? 'res-strike' : (p.result==='Hit By Pitch' ? 'res-hbp' : 'res-inplay'));
+        const resText = p.result==='In Play' ? ('● IN PLAY · ' + subtypeAbbrev(p.inPlayType)) : resultCode(p);
+        const pName = displayPitcherObj(pitcherObj(p.pitcherIdx));
+        row.innerHTML =
+          '<div class="pitch-row-main">' +
+            '<span class="mp-num">#' + p.n + '</span>' +
+            '<span class="mp-type">' + shortType(p.type) + '</span>' +
+            '<span class="mp-loc">' + pName + ' · Called ' + p.calledLabel + ' → Actual ' + p.actualLabel + '</span>' +
+            '<span class="mp-target ' + (p.onTarget?'good':'bad') + '">' + (p.onTarget?'On Target':'Miss') + '</span>' +
+            '<span class="mp-result ' + resClass + '">' + resText + '</span>' +
+          '</div>';
+        if(p.result === 'In Play'){
+          const dirRow = document.createElement('div');
+          dirRow.className = 'mini-row';
+          const dl = document.createElement('span'); dl.className='mini-lbl'; dl.textContent='Where:';
+          dirRow.appendChild(dl);
+          DIRECTIONS.forEach(d=>{
+            const btn = document.createElement('div');
+            btn.className = 'dir-mini-btn' + (p.hitDirection===d ? ' selected' : '');
+            btn.textContent = d;
+            btn.onclick = ()=> setHitDirection(p.n, d);
+            dirRow.appendChild(btn);
+          });
+          row.appendChild(dirRow);
+
+          const outRow = document.createElement('div');
+          outRow.className = 'mini-row';
+          const ol = document.createElement('span'); ol.className='mini-lbl'; ol.textContent='Result:';
+          outRow.appendChild(ol);
+          ['Out','Safe'].forEach(o=>{
+            const btn = document.createElement('div');
+            btn.className = 'dir-mini-btn' + (p.outOnPlay===o ? ' selected' : '');
+            btn.textContent = o;
+            btn.onclick = ()=> setOutOnPlay(p.n, o);
+            outRow.appendChild(btn);
+          });
+          row.appendChild(outRow);
+        }
+        paBlock.appendChild(row);
+      });
+      card.appendChild(paBlock);
+    });
+    list.appendChild(card);
+  });
+}
+function setHitDirection(pitchN, dir){
+  const p = state.pitches.find(x=>x.n===pitchN);
+  if(!p) return;
+  p.hitDirection = (p.hitDirection === dir) ? '' : dir;
+  persistState();
+  buildBatterBreakdown();
+}
+function setOutOnPlay(pitchN, val){
+  const p = state.pitches.find(x=>x.n===pitchN);
+  if(!p) return;
+  p.outOnPlay = (p.outOnPlay === val) ? '' : val;
+  persistState();
+  buildBatterBreakdown();
+}
+
+/* ---------------- Report ---------------- */
+function goReport(){
+  if(state.pitches.length === 0){
+    openModal('End game?', [], ()=>{ buildReport(); showScreen('screen-report'); }, 'End game', 'No pitches logged yet. End game anyway?');
+    return;
+  }
+  buildReport();
+  showScreen('screen-report');
+}
+function backToGame(){ showScreen('screen-track'); }
+
+function pitcherStats(idx){
+  const rows = state.pitches.filter(p=>p.pitcherIdx===idx);
+  const total = rows.length;
+  const onTargetPct = total ? Math.round((rows.filter(p=>p.onTarget).length/total)*100) : 0;
+  const typeCounts = {};
+  rows.forEach(p=> typeCounts[p.type] = (typeCounts[p.type]||0)+1 );
+  let favType='—', favN=0;
+  Object.keys(typeCounts).forEach(t=>{ if(typeCounts[t]>favN){favN=typeCounts[t]; favType=t;} });
+  return {rows, total, onTargetPct, favType: total?favType:'—'};
+}
+function insightsFor(rows){
+  const total = rows.length;
+  if(total < 3) return ['Log a few more pitches for meaningful insights.'];
+  const insights = [];
+  const onTargetN = rows.filter(p=>p.onTarget).length;
+  insights.push('Hit the called spot ' + Math.round((onTargetN/total)*100) + '% of the time (' + onTargetN + ' of ' + total + ').');
+  let best=null;
+  const types = [...new Set(rows.map(p=>p.type))];
+  types.forEach(t=>{
+    const trows = rows.filter(p=>p.type===t);
+    if(trows.length>=2){
+      const pct = trows.filter(p=>p.onTarget).length/trows.length;
+      if(!best || pct>best.pct) best = {t, pct, n:trows.length};
+    }
+  });
+  if(best) insights.push('Best command: ' + best.t + ' hit the called spot ' + Math.round(best.pct*100) + '% of the time (' + best.n + ' thrown).');
+  const misses = rows.filter(p=>!p.onTarget);
+  if(misses.length){
+    const dirCounts = {};
+    misses.forEach(p=>{
+      const dr = p.actualRow - p.calledRow, dc = p.actualCol - p.calledCol;
+      let d = [];
+      if(dr < 0) d.push('high'); else if(dr > 0) d.push('low');
+      if(dc < 0) d.push('in'); else if(dc > 0) d.push('away');
+      const key = d.join('/') || 'off-target';
+      dirCounts[key] = (dirCounts[key]||0)+1;
+    });
+    let topDir=null, topN=0;
+    Object.keys(dirCounts).forEach(k=>{ if(dirCounts[k]>topN){topN=dirCounts[k]; topDir=k;} });
+    if(topDir) insights.push('Misses tended to drift ' + topDir + ' (' + topN + ' of ' + misses.length + ' missed calls).');
+  }
+  return insights;
+}
+
+function inPlaySummary(rows){
+  const ip = rows.filter(p=>p.result==='In Play');
+  const withDir = ip.filter(p=>p.hitDirection);
+  const withOut = ip.filter(p=>p.outOnPlay);
+  if(withDir.length===0 && withOut.length===0) return null;
+  const dirCounts = {};
+  DIRECTIONS.forEach(d=>dirCounts[d]=0);
+  withDir.forEach(p=> dirCounts[p.hitDirection]++ );
+  const outN = withOut.filter(p=>p.outOnPlay==='Out').length;
+  const safeN = withOut.filter(p=>p.outOnPlay==='Safe').length;
+  return {dirCounts, dirTotal: withDir.length, outN, safeN, outSafeTotal: withOut.length, ipTotal: ip.length};
+}
+
+function buildReport(){
+  document.getElementById('rep-sub').textContent = (state.gameLabel || 'Untitled game') + ' · ' + new Date().toLocaleDateString();
+  const pIdxs = pitchersWithData();
+
+  const container = document.getElementById('rep-pitchers-container');
+  container.innerHTML = '';
+  pIdxs.forEach(idx=>{
+    const p = pitcherObj(idx);
+    const stats = pitcherStats(idx);
+    const block = document.createElement('div');
+    block.className = 'pitcher-block';
+    block.innerHTML = '<div class="pitcher-block-head">' + displayPitcherObj(p) + '</div>';
+
+    const statRow = document.createElement('div');
+    statRow.className = 'stat-row';
+    statRow.innerHTML =
+      '<div class="stat-card"><div class="val">' + stats.total + '</div><div class="lbl">Pitches</div></div>' +
+      '<div class="stat-card"><div class="val">' + stats.onTargetPct + '%</div><div class="lbl">On target</div></div>' +
+      '<div class="stat-card"><div class="val">' + shortType(stats.favType) + '</div><div class="lbl">Most thrown</div></div>';
+    block.appendChild(statRow);
+
+    const insightsBox = document.createElement('div');
+    insightsBox.className = 'insights';
+    const insList = insightsFor(stats.rows);
+    insightsBox.innerHTML = '<div class="h">Quick insights</div><ul>' + insList.map(i=>'<li>'+i+'</li>').join('') + '</ul>';
+    block.appendChild(insightsBox);
+
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'table-wrap';
+    tableWrap.style.marginTop = '0';
+    const table = document.createElement('table');
+    table.innerHTML = '<thead><tr><th>Type</th><th># Thrown</th><th>On Target%</th></tr></thead><tbody></tbody>';
+    const tbody = table.querySelector('tbody');
+    (p.activeTypes||[]).forEach(t=>{
+      const rows = stats.rows.filter(p2=>p2.type===t);
+      if(rows.length===0) return;
+      const pct = Math.round((rows.filter(p2=>p2.onTarget).length/rows.length)*100);
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + t + '</td><td>' + rows.length + '</td><td>' + pct + '%</td>';
+      tbody.appendChild(tr);
+    });
+    const scrollWrap = document.createElement('div'); scrollWrap.className='table-scroll'; scrollWrap.appendChild(table);
+    tableWrap.appendChild(scrollWrap);
+    block.appendChild(tableWrap);
+
+    const ipSum = inPlaySummary(stats.rows);
+    if(ipSum){
+      const ipWrap = document.createElement('div');
+      ipWrap.className = 'table-wrap';
+      ipWrap.style.marginTop = '0';
+      let ipHtml = '<div style="padding:10px 12px; font-family:\'IBM Plex Mono\', monospace; font-size:10.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.05em; font-weight:700; border-bottom:1px solid var(--ink-faint);">Balls In Play (' + ipSum.ipTotal + ')</div>';
+      if(ipSum.dirTotal > 0){
+        ipHtml += '<div class="table-scroll"><table><thead><tr><th>Direction</th><th>Count</th></tr></thead><tbody>';
+        DIRECTIONS.forEach(d=>{
+          if(ipSum.dirCounts[d] > 0) ipHtml += '<tr><td>' + d + '</td><td>' + ipSum.dirCounts[d] + '</td></tr>';
+        });
+        ipHtml += '</tbody></table></div>';
+      }
+      if(ipSum.outSafeTotal > 0){
+        ipHtml += '<div style="padding:10px 12px; font-family:\'IBM Plex Mono\', monospace; font-size:11px;">Outs: <b>' + ipSum.outN + '</b> · Safe: <b>' + ipSum.safeN + '</b></div>';
+      }
+      ipWrap.innerHTML = ipHtml;
+      block.appendChild(ipWrap);
+    }
+
+    container.appendChild(block);
+  });
+
+  const batterBody = document.querySelector('#rep-batter-table tbody');
+  batterBody.innerHTML = '';
+  for(let s=1; s<=state.lineupSize; s++){
+    const sum = slotSummary(s);
+    if(sum.pitches===0) continue;
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>#' + sum.slot + '</td><td>' + sum.timesFaced + '</td><td>' + sum.pitches + '</td><td>' + sum.balls + '</td><td>' + sum.strikes + '</td><td>' + sum.inPlayN + '</td><td>' + sum.hbp + '</td>';
+    batterBody.appendChild(tr);
+  }
+
+  const logBody = document.querySelector('#rep-log-table tbody');
+  logBody.innerHTML = '';
+  state.pitches.forEach(p=>{
+    const tr = document.createElement('tr');
+    const resText = p.result==='In Play' ? ('● IP-'+subtypeAbbrev(p.inPlayType)) : resultCode(p);
+    const resCellClass = p.result==='In Play' ? ' style="font-weight:800; color:var(--brick-dark);"' : '';
+    const pName = displayPitcherObj(pitcherObj(p.pitcherIdx));
+    tr.innerHTML = '<td>' + p.n + '</td><td>' + pName + '</td><td>#' + p.batterSlot + '</td><td>' + shortType(p.type) + '</td><td>' + p.calledLabel + '</td><td>' + p.actualLabel + '</td><td>' + (p.onTarget?'✓':'✗') + '</td><td' + resCellClass + '>' + resText + '</td>';
+    logBody.appendChild(tr);
+  });
+
+  heatmapPitcherIdx = pIdxs.length ? pIdxs[0] : 0;
+  buildHeatmapPitcherToggle(pIdxs);
+  renderHeatmap();
+}
+
+function buildHeatmapPitcherToggle(pIdxs){
+  const el = document.getElementById('heatmap-pitcher-toggle');
+  el.innerHTML = '';
+  if(pIdxs.length <= 1) return;
+  pIdxs.forEach(idx=>{
+    const btn = document.createElement('button');
+    btn.textContent = displayPitcherObj(pitcherObj(idx));
+    btn.className = idx===heatmapPitcherIdx ? 'active' : '';
+    btn.onclick = ()=>{ heatmapPitcherIdx = idx; buildHeatmapPitcherToggle(pIdxs); renderHeatmap(); };
+    el.appendChild(btn);
+  });
+}
+
+function setHeatmapMode(mode){
+  heatmapMode = mode;
+  document.querySelectorAll('#heatmap-mode-toggle button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+  renderHeatmap();
+}
+
+function computeHeatmapMatrices(pitchesSubset){
+  const src = pitchesSubset || state.pitches;
+  const calledCounts = Array.from({length:5},()=>Array(5).fill(0));
+  const actualCounts = Array.from({length:5},()=>Array(5).fill(0));
+  const accCalled = Array.from({length:5},()=>Array(5).fill(0));
+  const accOnTarget = Array.from({length:5},()=>Array(5).fill(0));
+  src.forEach(p=>{
+    calledCounts[p.calledRow][p.calledCol]++;
+    actualCounts[p.actualRow][p.actualCol]++;
+    accCalled[p.calledRow][p.calledCol]++;
+    if(p.onTarget) accOnTarget[p.calledRow][p.calledCol]++;
+  });
+  return {calledCounts, actualCounts, accCalled, accOnTarget};
+}
+
+function renderHeatmap(){
+  const subset = state.pitches.filter(p=>p.pitcherIdx===heatmapPitcherIdx);
+  const m = computeHeatmapMatrices(subset);
+  const grid = document.getElementById('heatmap-grid');
+  grid.innerHTML = '';
+  let maxVal = 1;
+  if(heatmapMode==='called') maxVal = Math.max(1, ...m.calledCounts.flat());
+  if(heatmapMode==='actual') maxVal = Math.max(1, ...m.actualCounts.flat());
+
+  for(let r=0;r<5;r++){
+    for(let c=0;c<5;c++){
+      const cell = document.createElement('div');
+      cell.className = 'heat-cell' + (inZoneCore(r,c) ? ' core' : '');
+      let text = '', alpha = 0, base = '30,43,34';
+      if(heatmapMode==='called'){ const v=m.calledCounts[r][c]; alpha=v/maxVal; base='181,101,29'; text=v>0?v:''; }
+      else if(heatmapMode==='actual'){ const v=m.actualCounts[r][c]; alpha=v/maxVal; base='168,50,38'; text=v>0?v:''; }
+      else { const n=m.accCalled[r][c]; if(n>0){ const pct=m.accOnTarget[r][c]/n; alpha=pct; base='63,107,52'; text=Math.round(pct*100)+'%'; } }
+      cell.style.backgroundColor = alpha>0 ? ('rgba(' + base + ', ' + Math.max(alpha,0.12).toFixed(2) + ')') : 'rgba(30,43,34,0.04)';
+      cell.textContent = text;
+      grid.appendChild(cell);
+    }
+  }
+  const captions = {
+    called: 'How often each spot was called — ' + displayPitcherObj(pitcherObj(heatmapPitcherIdx)) + '.',
+    actual: 'Where pitches actually landed — ' + displayPitcherObj(pitcherObj(heatmapPitcherIdx)) + '.',
+    accuracy: 'On-target % for pitches called to that spot — ' + displayPitcherObj(pitcherObj(heatmapPitcherIdx)) + '.'
+  };
+  document.getElementById('heatmap-caption').textContent = captions[heatmapMode];
+}
+
+/* ---------------- CSV / Image / Email ---------------- */
+const HEAT_ROW_LABELS = ['High (ball)','High','Middle','Low','Low (ball)'];
+const HEAT_COL_LABELS = ['In (ball)','In','Middle','Away','Away (ball)'];
+
+function exportCSV(){
+  const header = ['Pitch#','Pitcher','PitcherNum','BatterSlot','PitchType','LocationCalled','LocationActual','OnTarget','Result','InPlayType','HitDirection','OutOnPlay'];
+  const rows = state.pitches.map(pt => {
+    const p = pitcherObj(pt.pitcherIdx);
+    return [pt.n, p.name, p.number, pt.batterSlot, pt.type, pt.calledLabel, pt.actualLabel, pt.onTarget?'Y':'N', pt.result, pt.inPlayType, pt.hitDirection, pt.outOnPlay];
+  });
+  let csv = [header, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+
+  const batterHeader = ['BatterSlot','TimesFaced','Pitches','Balls','Strikes','HBP','InPlay','PopFly','LineDrive','GroundBall','OnTargetPct'];
+  const batterRows = [];
+  for(let s=1; s<=state.lineupSize; s++){
+    const sum = slotSummary(s);
+    if(sum.pitches===0) continue;
+    batterRows.push([sum.slot, sum.timesFaced, sum.pitches, sum.balls, sum.strikes, sum.hbp, sum.inPlayN, sum.pf, sum.ld, sum.gb, sum.onTargetPct+'%']);
+  }
+  csv += '\n\n' + [batterHeader, ...batterRows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+
+  function matrixCsv(title, matrix){
+    const lines = ['"' + title + '"'];
+    lines.push(['""', ...HEAT_COL_LABELS.map(c=>'"'+c+'"')].join(','));
+    for(let r=0;r<5;r++){
+      const row = ['"' + HEAT_ROW_LABELS[r] + '"'];
+      for(let c=0;c<5;c++) row.push('"' + matrix[r][c] + '"');
+      lines.push(row.join(','));
+    }
+    return lines.join('\n');
+  }
+
+  pitchersWithData().forEach(idx=>{
+    const p = pitcherObj(idx);
+    const subset = state.pitches.filter(pt=>pt.pitcherIdx===idx);
+    csv += '\n\n' + '"Pitcher — ' + displayPitcherObj(p) + '"';
+    const typeHeader = ['PitchType','#Thrown','OnTargetPct'];
+    const typeRows = [];
+    (p.activeTypes||[]).forEach(t=>{
+      const trows = subset.filter(pt=>pt.type===t);
+      if(trows.length===0) return;
+      const pct = Math.round((trows.filter(pt=>pt.onTarget).length/trows.length)*100);
+      typeRows.push([t, trows.length, pct+'%']);
+    });
+    csv += '\n' + [typeHeader, ...typeRows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+
+    const ipSum = inPlaySummary(subset);
+    if(ipSum){
+      csv += '\n\n' + '"' + displayPitcherObj(p) + ' — Balls In Play (' + ipSum.ipTotal + ')"';
+      if(ipSum.dirTotal > 0){
+        const dirRows = DIRECTIONS.filter(d=>ipSum.dirCounts[d]>0).map(d=>[d, ipSum.dirCounts[d]]);
+        csv += '\n' + [['Direction','Count'], ...dirRows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+      }
+      if(ipSum.outSafeTotal > 0){
+        csv += '\n' + [['Out','Safe'], [ipSum.outN, ipSum.safeN]].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+      }
+    }
+
+    const m = computeHeatmapMatrices(subset);
+    const calledM = m.calledCounts.map(row=>row.map(v=>v||''));
+    const actualM = m.actualCounts.map(row=>row.map(v=>v||''));
+    const accM = m.accCalled.map((row,r)=>row.map((n,c)=> n>0 ? Math.round(m.accOnTarget[r][c]/n*100)+'%' : ''));
+    csv += '\n\n' + matrixCsv(displayPitcherObj(p) + ' — Heatmap: Called Location Frequency', calledM);
+    csv += '\n\n' + matrixCsv(displayPitcherObj(p) + ' — Heatmap: Actual Location Frequency', actualM);
+    csv += '\n\n' + matrixCsv(displayPitcherObj(p) + ' — Heatmap: On-Target Accuracy %', accM);
+  });
+
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fnameBase = state.pitchers.length===1 ? (state.pitchers[0].name||'pitcher') : 'team';
+  a.href = url; a.download = (fnameBase.replace(/\s+/g,'_')) + '_accuracy_log_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  flashToast('CSV downloaded (per-pitcher stats included)');
+}
+
+function exportHeatmapImage(){
+  const subset = state.pitches.filter(p=>p.pitcherIdx===heatmapPitcherIdx);
+  const m = computeHeatmapMatrices(subset);
+  const modes = [
+    {key:'called', title:'Called Location Frequency', base:[181,101,29]},
+    {key:'actual', title:'Actual Location Frequency', base:[168,50,38]},
+    {key:'accuracy', title:'On-Target Accuracy %', base:[63,107,52]}
+  ];
+  const cell = 58, pad = 18, gridSize = 5*cell;
+  const blockH = 32 + gridSize + pad;
+  const canvas = document.createElement('canvas');
+  canvas.width = gridSize + pad*2;
+  canvas.height = blockH*3 + pad + 40;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#F7F3E8'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1E2B22'; ctx.font = '700 16px Arial';
+  ctx.fillText(displayPitcherObj(pitcherObj(heatmapPitcherIdx)) + ' — ' + (state.gameLabel || 'Untitled game'), canvas.width/2, 22);
+
+  let y = 40 + pad;
+  modes.forEach(mode=>{
+    ctx.fillStyle = '#1E2B22'; ctx.font = '600 14px Arial';
+    ctx.fillText(mode.title, canvas.width/2, y + 12);
+    const gridTop = y + 30;
+    let maxVal = 1;
+    if(mode.key==='called') maxVal = Math.max(1, ...m.calledCounts.flat());
+    if(mode.key==='actual') maxVal = Math.max(1, ...m.actualCounts.flat());
+    for(let r=0;r<5;r++){
+      for(let c=0;c<5;c++){
+        let alpha=0, label='';
+        if(mode.key==='called'){ const v=m.calledCounts[r][c]; alpha=v/maxVal; label = v>0?String(v):''; }
+        else if(mode.key==='actual'){ const v=m.actualCounts[r][c]; alpha=v/maxVal; label = v>0?String(v):''; }
+        else { const n=m.accCalled[r][c]; if(n>0){ const pct=m.accOnTarget[r][c]/n; alpha=pct; label=Math.round(pct*100)+'%'; } }
+        const x = pad + c*cell, yy = gridTop + r*cell, w = cell-3, h = cell-3;
+        ctx.fillStyle = alpha>0 ? ('rgba(' + mode.base.join(',') + ', ' + Math.max(alpha,0.15).toFixed(2) + ')') : 'rgba(30,43,34,0.05)';
+        ctx.fillRect(x,yy,w,h);
+        if(r>=1&&r<=3&&c>=1&&c<=3){
+          ctx.strokeStyle='rgba(30,43,34,0.4)'; ctx.lineWidth=2; ctx.setLineDash([4,3]);
+          ctx.strokeRect(x,yy,w,h); ctx.setLineDash([]);
+        }
+        if(label){ ctx.fillStyle='#1E2B22'; ctx.font='600 13px Arial'; ctx.fillText(label, x+w/2, yy+h/2); }
+      }
+    }
+    y += blockH;
+  });
+
+  canvas.toBlob(blob=>{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = ((pitcherObj(heatmapPitcherIdx).name||'pitcher').replace(/\s+/g,'_')) + '_heatmaps_' + new Date().toISOString().slice(0,10) + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    flashToast('Heatmap image downloaded');
+  });
+}
+
+function padCol(str, len){
+  str = String(str);
+  return str.length >= len ? str.slice(0, len-1)+' ' : str.padEnd(len,' ');
+}
+function buildBatterBreakdownText(){
+  const lines = [padCol('Batter',8)+padCol('PAs',5)+padCol('Pitch',7)+padCol('B',3)+padCol('K',3)+padCol('HBP',5)+'IP'];
+  lines.push('-'.repeat(38));
+  for(let s=1; s<=state.lineupSize; s++){
+    const sum = slotSummary(s);
+    if(sum.pitches===0) continue;
+    lines.push(padCol('#'+s,8)+padCol(String(sum.timesFaced),5)+padCol(String(sum.pitches),7)+padCol(String(sum.balls),3)+padCol(String(sum.strikes),3)+padCol(String(sum.hbp),5)+sum.inPlayN);
+  }
+  return lines.join('\n');
+}
+function buildPitcherTypeText(){
+  const blocks = [];
+  pitchersWithData().forEach(idx=>{
+    const p = pitcherObj(idx);
+    const stats = pitcherStats(idx);
+    const lines = ['Pitcher: ' + displayPitcherObj(p) + ' (' + stats.total + ' pitches, ' + stats.onTargetPct + '% on target)'];
+    lines.push(padCol('Type',13)+padCol('#Thrown',9)+'OnTarget%');
+    lines.push('-'.repeat(32));
+    (p.activeTypes||[]).forEach(t=>{
+      const rows = stats.rows.filter(p2=>p2.type===t);
+      if(rows.length===0) return;
+      const pct = Math.round((rows.filter(p2=>p2.onTarget).length/rows.length)*100);
+      lines.push(padCol(t,13)+padCol(String(rows.length),9)+pct+'%');
+    });
+    const ins = insightsFor(stats.rows);
+    ins.forEach(i=> lines.push('  - ' + i));
+    const ipSum = inPlaySummary(stats.rows);
+    if(ipSum){
+      lines.push('  In play (' + ipSum.ipTotal + '): ' + DIRECTIONS.filter(d=>ipSum.dirCounts[d]>0).map(d=>d+' '+ipSum.dirCounts[d]).join(', ') + (ipSum.outSafeTotal>0 ? ' — Out: '+ipSum.outN+', Safe: '+ipSum.safeN : ''));
+    }
+    blocks.push(lines.join('\n'));
+  });
+  return blocks.join('\n\n');
+}
+function buildPitchTableText(){
+  const CAP = 20;
+  const cols = [['#',4],['P#',4],['Bat',5],['Type',9],['Called',13],['Actual',13],['Res',7]];
+  const lines = [cols.map(c=>padCol(c[0],c[1])).join('')];
+  lines.push(cols.map(c=>'-'.repeat(c[1]-1)+' ').join(''));
+  state.pitches.slice(0,CAP).forEach(p=>{
+    const resText = p.result==='In Play' ? ('IP-'+subtypeAbbrev(p.inPlayType)) : resultCode(p);
+    const pNum = pitcherObj(p.pitcherIdx).number || '?';
+    lines.push([padCol(p.n,4), padCol('#'+pNum,4), padCol('#'+p.batterSlot,5), padCol(p.type,9), padCol(p.calledLabel,13), padCol(p.actualLabel,13), padCol(resText,7)].join(''));
+  });
+  if(state.pitches.length > CAP){
+    lines.push('...and ' + (state.pitches.length - CAP) + ' more pitches — see attached CSV for the complete log.');
+  }
+  return lines.join('\n');
+}
+function buildEmailBody(){
+  const total = state.pitches.length;
+  const onTargetPct = total ? Math.round((state.pitches.filter(p=>p.onTarget).length/total)*100) : 0;
+  const lines = [
+    'Accuracy Recap',
+    'Game: ' + (state.gameLabel || 'Untitled game'),
+    'Date: ' + new Date().toLocaleDateString(),
+    'Pitchers used: ' + pitchersWithData().map(idx=>displayPitcherObj(pitcherObj(idx))).join(', '),
+    '',
+    'Total pitches (all pitchers): ' + total,
+    'Overall on-target: ' + onTargetPct + '%',
+    '',
+    'By pitcher (with insights):',
+    buildPitcherTypeText(),
+    '',
+    'By batter (all pitchers):',
+    buildBatterBreakdownText(),
+    '',
+    'Pitch-by-pitch (P# = pitcher jersey number):',
+    buildPitchTableText(),
+    '',
+    'Full CSV (with per-pitcher + batter + heatmap tables) and a heatmap image were exported separately from the app — attach both to this email if you want the complete picture.'
+  ];
+  return lines.join('\n');
+}
+function emailRecap(){
+  openModal('Email recap', [{id:'em-addr', label:'Coach email', placeholder:'coach@example.com', type:'email'}], (vals)=>{
+    if(!vals['em-addr']) return;
+    const subject = encodeURIComponent('Accuracy Recap — ' + (state.gameLabel || 'Untitled game'));
+    const body = encodeURIComponent(buildEmailBody());
+    window.location.href = 'mailto:' + encodeURIComponent(vals['em-addr']) + '?subject=' + subject + '&body=' + body;
+    flashToast('Opening Mail — attach the CSV/PNG if you exported them');
+  }, 'Open in Mail');
+}
+function newGame(){
+  openModal('Start a new game?', [], ()=>{
+    state.pitches = [];
+    state.atBatId = 1;
+    state.batterSlot = 1;
+    document.getElementById('resume-banner').style.display = 'none';
+    showScreen('screen-setup');
+  }, 'Start new game', 'Your current game stays saved in Game History — this just clears the screen to start tracking a new one.');
+}
+</script>
+</body>
+</html>
