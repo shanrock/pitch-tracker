@@ -291,6 +291,7 @@
       <div class="meta">
         <div id="track-batter-line" onclick="editBatterNumber(state.batterSlot)">Batter <b>1</b> of <span>9</span></div>
         <div class="lineup-controls">
+          <button class="icon-btn" id="undo-location-btn" onclick="undoLocationTap()">Undo Location</button>
           <button class="icon-btn" onclick="nextBatter()">Next Batter ▸</button>
         </div>
       </div>
@@ -332,7 +333,7 @@
         <div class="subtype-btn" onclick="selectSubtype('Ground Ball')">Ground Ball</div>
       </div>
 
-      <div class="section-label"><span id="log-section-label">Log</span><span class="line"></span></div>
+      <div class="section-label"><span id="log-section-label">Log</span><span class="line"></span><button class="icon-btn" id="undo-last-btn" onclick="undoLastPitch()">Undo Last</button></div>
       <div class="log-strip" id="log-strip"><div class="empty-log">No pitches yet.</div></div>
     </div>
   </div>
@@ -477,6 +478,7 @@ let state = {
   batterSlot: 1,
   atBatId: 1,
   pitches: [],
+  undoSnapshots: [],
   batterNumbers: {},
   finalized: false,
   pendingType: null,
@@ -520,6 +522,7 @@ function batterLabel(slot){
   return slot + '-' + (getBatterNumber(slot) || '*');
 }
 function editBatterNumber(slot){
+  if(state.finalized){ flashToast('This game is finalized — locked'); return; }
   openModal('Batter ' + slot + ' — jersey number', [{id:'bnum', label:'Jersey number', placeholder:'e.g. 12', value: getBatterNumber(slot)}], (vals)=>{
     if(!state.batterNumbers) state.batterNumbers = {};
     state.batterNumbers[slot] = vals.bnum || '';
@@ -666,6 +669,7 @@ function startGame(){
   state.gameId = generateGameId();
   state.createdAt = Date.now();
   state.pitches = [];
+  state.undoSnapshots = [];
   state.batterNumbers = {};
   state.finalized = false;
 
@@ -677,6 +681,7 @@ function startGame(){
 
 /* ---------------- Change pitcher screen ---------------- */
 function openChangePitcher(){
+  if(state.finalized){ flashToast('This game is finalized — locked'); return; }
   const cur = currentPitcher();
   document.getElementById('cp-name').value = cur.name || '';
   document.getElementById('cp-num').value = cur.number || '';
@@ -772,6 +777,25 @@ function onZoneTap(r,c,cellEl){
   }
 }
 
+function undoLocationTap(){
+  if(state.finalized){ flashToast('This game is finalized — locked'); return; }
+  if(state.pendingActual){
+    document.querySelectorAll('#track-zone-grid .zone-cell').forEach(cell=>cell.classList.remove('actual','ontarget'));
+    if(state.pendingCalled && state.pendingCalled.el){ state.pendingCalled.el.classList.add('called'); }
+    state.pendingActual = null;
+    document.getElementById('track-zone-grid').classList.remove('disabled-veil');
+    document.getElementById('zone-hint-text').textContent = 'Now tap where it actually went.';
+    flashToast('Undid actual location — tap again');
+  } else if(state.pendingCalled){
+    if(state.pendingCalled.el){ state.pendingCalled.el.classList.remove('called'); }
+    state.pendingCalled = null;
+    document.getElementById('zone-hint-text').textContent = 'Tap the called spot.';
+    flashToast('Undid called location — tap again');
+  } else {
+    flashToast('Nothing to undo yet');
+  }
+}
+
 function selectResultSimple(result){
   if(!state.pendingActual){ flashToast('Tap the called and actual spots first'); return; }
   commitPitch(result, '');
@@ -789,6 +813,7 @@ function commitPitch(result, inPlayType){
   const cz = state.pendingCalled, az = state.pendingActual;
   const n = state.pitches.length + 1;
   const abId = state.atBatId;
+  state.undoSnapshots.push({atBatId: state.atBatId, batterSlot: state.batterSlot});
   state.pitches.push({
     n, batterSlot: state.batterSlot, atBatId: abId, pitcherIdx: state.currentPitcherIdx,
     type: state.pendingType,
@@ -823,12 +848,35 @@ function commitPitch(result, inPlayType){
   }, 380);
 }
 
+function undoLastPitch(){
+  if(state.finalized){ flashToast('This game is finalized — locked'); return; }
+  if(state.pitches.length === 0){ flashToast('Nothing to undo'); return; }
+  const removed = state.pitches.pop();
+  const snap = (state.undoSnapshots && state.undoSnapshots.pop()) || null;
+  if(snap){
+    state.atBatId = snap.atBatId;
+    state.batterSlot = snap.batterSlot;
+  }
+  state.pendingType = null;
+  state.pendingCalled = null;
+  state.pendingActual = null;
+  document.querySelectorAll('#track-zone-grid .zone-cell').forEach(cell=>cell.classList.remove('called','actual','ontarget'));
+  document.querySelectorAll('#pitch-type-grid .pitch-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('subtype-row').style.display = 'none';
+  document.getElementById('track-zone-grid').classList.add('disabled-veil');
+  document.getElementById('zone-hint-text').textContent = 'Pick a pitch type, then tap the called spot.';
+  refreshTrackScreen();
+  const pName = displayPitcherObj(pitcherObj(removed.pitcherIdx));
+  flashToast('Undid pitch #' + removed.n + ' (' + pName + ')' + (snap ? '' : ' — count may need a manual check'));
+}
+
 /* ---------------- Batter / count controls ---------------- */
 function doAdvanceBatter(){
   state.atBatId += 1;
   state.batterSlot = state.batterSlot >= state.lineupSize ? 1 : state.batterSlot + 1;
 }
 function nextBatter(){
+  if(state.finalized){ flashToast('This game is finalized — locked'); return; }
   doAdvanceBatter();
   refreshTrackScreen();
   flashToast('Next batter — #' + state.batterSlot + ' up');
@@ -870,8 +918,12 @@ function refreshTrackScreen(){
     document.getElementById('track-zone-grid').classList.add('disabled-veil');
     document.querySelector('.result-row').classList.add('disabled-veil');
     document.getElementById('subtype-row').style.display = 'none';
+    document.getElementById('undo-location-btn').classList.add('disabled-veil');
+    document.getElementById('undo-last-btn').classList.add('disabled-veil');
   } else {
     lockNotice.style.display = 'none';
+    document.getElementById('undo-location-btn').classList.remove('disabled-veil');
+    document.getElementById('undo-last-btn').classList.remove('disabled-veil');
   }
 
   persistState();
@@ -1250,6 +1302,7 @@ function buildBatterBreakdown(){
   });
 }
 function setHitDirection(pitchN, dir){
+  if(state.finalized){ flashToast('This game is finalized — locked'); return; }
   const p = state.pitches.find(x=>x.n===pitchN);
   if(!p) return;
   p.hitDirection = (p.hitDirection === dir) ? '' : dir;
@@ -1257,6 +1310,7 @@ function setHitDirection(pitchN, dir){
   buildBatterBreakdown();
 }
 function setOutOnPlay(pitchN, val){
+  if(state.finalized){ flashToast('This game is finalized — locked'); return; }
   const p = state.pitches.find(x=>x.n===pitchN);
   if(!p) return;
   p.outOnPlay = (p.outOnPlay === val) ? '' : val;
@@ -1273,7 +1327,7 @@ function goReport(){
   buildReport();
   showScreen('screen-report');
 }
-function backToGame(){ showScreen('screen-track'); }
+function backToGame(){ showScreen('screen-track'); refreshTrackScreen(); }
 function finalizeGame(){
   if(state.finalized){ flashToast('Game already finalized'); return; }
   openModal('Finalize this game?', [], async ()=>{
@@ -1705,6 +1759,7 @@ function emailRecap(){
 function newGame(){
   openModal('Start a new game?', [], ()=>{
     state.pitches = [];
+    state.undoSnapshots = [];
     state.atBatId = 1;
     state.batterSlot = 1;
     document.getElementById('resume-banner').style.display = 'none';
