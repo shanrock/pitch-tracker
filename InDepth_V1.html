@@ -187,6 +187,23 @@
   .dir-mini-btn{font-family:'IBM Plex Mono', monospace; font-size:10px; padding:5px 8px; border-radius:6px; border:1px solid var(--ink-faint); background:var(--card-2); color:var(--ink-dim); cursor:pointer;}
   .dir-mini-btn.selected{background:var(--clay); color:#FFF8EF; border-color:var(--clay-dark);}
   .empty-batters{color:var(--ink-dim); font-size:13px; text-align:center; padding:40px 20px;}
+
+  .roster-chip-row{display:flex; gap:8px; overflow-x:auto; padding:2px 2px 4px;}
+  .roster-chip{flex:0 0 auto; background:var(--card); border:1px solid var(--ink-faint); border-radius:8px; padding:8px 12px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; color:var(--ink);}
+  .roster-chip:active{transform:scale(.96);}
+
+  .batter-card.batter-current{border-color:var(--grass); box-shadow:0 0 0 2px var(--grass) inset;}
+  .batter-card.batter-current .batter-card-head{background:rgba(63,107,52,0.1);}
+  .batter-card.batter-previous{border-color:var(--mustard); box-shadow:0 0 0 2px var(--mustard) inset;}
+  .batter-card.batter-previous .batter-card-head{background:rgba(201,162,39,0.14);}
+  .batter-flag{font-family:'IBM Plex Mono', monospace; font-size:9px; font-weight:800; padding:2px 7px; border-radius:5px; text-transform:uppercase; letter-spacing:.04em; margin-left:8px; vertical-align:middle;}
+  .batter-flag.cur{background:var(--grass); color:#FFF8EF;}
+  .batter-flag.prev{background:var(--mustard); color:#3A2C05;}
+
+  .finalized-notice{margin:8px 16px 0; padding:10px 14px; border-radius:10px; background:#F3E3D8; border:1px solid var(--brick); color:var(--brick-dark); font-weight:700; font-size:12.5px; text-align:center;}
+  .last-ab-notice{margin:8px 16px 0; padding:9px 14px; border-radius:10px; background:var(--card-2); border:1px solid var(--ink-faint); color:var(--ink); font-weight:700; font-size:12px; text-align:center;}
+  .editable-link{cursor:pointer; text-decoration:underline; color:var(--clay-dark);}
+  .finalized-badge{display:inline-block; margin-top:6px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; font-weight:700; color:var(--brick-dark); background:rgba(168,50,38,0.1); border:1px solid var(--brick); border-radius:6px; padding:6px 10px;}
 </style>
 </head>
 <body>
@@ -206,6 +223,11 @@
       <div class="brand-eyebrow">Quick Accuracy Tracker</div>
       <h1 class="brand-title">Call it.<br>Track it.<br>See it.</h1>
       <p class="brand-sub">Get 'er Done!</p>
+
+      <div class="field" id="setup-roster-field" style="display:none;">
+        <label>Previously used pitchers</label>
+        <div class="roster-chip-row" id="setup-roster-chips"></div>
+      </div>
 
       <div class="field-row">
         <div class="field">
@@ -257,7 +279,7 @@
       </div>
       <div class="topbar-actions">
         <button class="icon-btn" onclick="goBatters()">Batters</button>
-        <button class="icon-btn" onclick="goReport()">End Game</button>
+        <button class="icon-btn" onclick="goReport()">Stats</button>
       </div>
     </div>
 
@@ -267,7 +289,7 @@
         <div class="count-lbl">Ball - Strike</div>
       </div>
       <div class="meta">
-        <div>Batter <b id="track-batter-slot">1</b> of <span id="track-lineup-size">9</span></div>
+        <div id="track-batter-line" onclick="editBatterNumber(state.batterSlot)">Batter <b>1</b> of <span>9</span></div>
         <div class="lineup-controls">
           <button class="icon-btn" onclick="nextBatter()">Next Batter ▸</button>
         </div>
@@ -278,6 +300,9 @@
       <span class="num" id="track-pitch-count">0</span>
       <span class="lbl">pitches this outing</span>
     </div>
+
+    <div class="finalized-notice" id="track-finalized-notice" style="display:none;">🔒 This game is finalized — pitch entry is locked.</div>
+    <div class="last-ab-notice" id="track-last-ab-notice" style="display:none;"></div>
 
     <div class="body-scroll">
       <div class="section-label"><span>1 · Pitch type</span><span class="line"></span></div>
@@ -319,6 +344,10 @@
       <button class="icon-btn" onclick="showScreen('screen-track')">Cancel</button>
     </div>
     <div class="setup-wrap" style="padding-top:20px;">
+      <div class="field" id="cp-roster-field" style="display:none;">
+        <label>Previously used pitchers</label>
+        <div class="roster-chip-row" id="cp-roster-chips"></div>
+      </div>
       <div class="field-row">
         <div class="field">
           <label for="cp-name">Pitcher name</label>
@@ -370,6 +399,11 @@
         <div class="eyebrow">Post-Game Recap · Accuracy Mode</div>
         <h1 id="rep-title">Game Recap</h1>
         <div class="sub" id="rep-sub">—</div>
+        <div class="finalized-badge" id="rep-finalized-badge" style="display:none;">🔒 Finalized — locked</div>
+      </div>
+
+      <div style="padding:0 20px 4px;">
+        <button class="ghost-btn" style="margin-top:0;" onclick="backToGame()">← Back to game (keep tracking)</button>
       </div>
 
       <div id="rep-pitchers-container"></div>
@@ -378,7 +412,7 @@
       <div class="table-wrap" style="margin-top:0;">
         <div class="table-scroll">
           <table id="rep-batter-table">
-            <thead><tr><th>Batter</th><th>PAs</th><th>Pitches</th><th>B</th><th>K</th><th>IP</th><th>HBP</th></tr></thead>
+            <thead><tr><th>Batter</th><th>PAs</th><th>Pitches</th><th>B</th><th>K</th><th>BB</th><th>IP</th><th>HBP</th><th>Last AB</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -406,10 +440,10 @@
 
       <div class="report-actions">
         <button class="ghost-btn" style="margin-top:0;" onclick="goBatters()">View Batter Breakdown</button>
-        <button class="ghost-btn" onclick="goHistory()">View Game History</button>
         <button class="primary-btn" onclick="exportCSV()">Export CSV</button>
         <button class="ghost-btn" onclick="exportHeatmapImage()">Download Heatmap Image (PNG)</button>
         <button class="ghost-btn" onclick="emailRecap()">Email recap to coach</button>
+        <button class="ghost-btn" id="finalize-btn" style="border-color:var(--brick); color:var(--brick-dark);" onclick="finalizeGame()">Finalize Game</button>
         <button class="ghost-btn" onclick="backToGame()">← Back to game (keep tracking)</button>
         <button class="ghost-btn" onclick="newGame()">Start a new game</button>
       </div>
@@ -433,7 +467,7 @@
 
 <script>
 const PITCH_TYPES = ['Fastball','Changeup','Riseball','Dropball','Curveball','Screwball'];
-const DIRECTIONS = ['LF','CF','RF','LIF','CIF','RIF'];
+const DIRECTIONS = ['LF','CF','RF','1B','2B','SS','3B','P','C'];
 
 let state = {
   pitchers: [],
@@ -443,6 +477,8 @@ let state = {
   batterSlot: 1,
   atBatId: 1,
   pitches: [],
+  batterNumbers: {},
+  finalized: false,
   pendingType: null,
   pendingCalled: null,
   pendingActual: null
@@ -450,6 +486,7 @@ let state = {
 let cameFromReport = false;
 let heatmapMode = 'called';
 let heatmapPitcherIdx = 0;
+let navStack = [];
 
 /* ---------------- Zone helpers ---------------- */
 function rowWord(r){ return r<=1 ? 'High' : r>=3 ? 'Low' : 'Middle'; }
@@ -475,6 +512,22 @@ function currentPitcher(){ return pitcherObj(state.currentPitcherIdx); }
 function displayPitcher(){ return displayPitcherObj(currentPitcher()); }
 function pitchersWithData(){
   return state.pitchers.map((p,idx)=>idx).filter(idx=> state.pitches.some(pt=>pt.pitcherIdx===idx));
+}
+
+/* ---------------- Batter identity ---------------- */
+function getBatterNumber(slot){ return (state.batterNumbers && state.batterNumbers[slot]) || ''; }
+function batterLabel(slot){
+  return slot + '-' + (getBatterNumber(slot) || '*');
+}
+function editBatterNumber(slot){
+  openModal('Batter ' + slot + ' — jersey number', [{id:'bnum', label:'Jersey number', placeholder:'e.g. 12', value: getBatterNumber(slot)}], (vals)=>{
+    if(!state.batterNumbers) state.batterNumbers = {};
+    state.batterNumbers[slot] = vals.bnum || '';
+    persistState();
+    refreshTrackScreen();
+    if(document.getElementById('screen-batters').classList.contains('active')) buildBatterBreakdown();
+    if(document.getElementById('screen-report').classList.contains('active')) buildReport();
+  }, 'Save');
 }
 
 /* ---------------- Modal ---------------- */
@@ -531,8 +584,61 @@ function readChipSelection(containerId, customFieldId){
   return types;
 }
 
+/* ---------------- Saved-pitcher roster (across past games + this game) ---------------- */
+async function getRosterPitchers(){
+  const games = await dbGetAllGames();
+  const map = new Map();
+  games.forEach(g=>{
+    (g.pitchers||[]).forEach(p=>{
+      const key = pitcherKey(p.name, p.number);
+      if(!map.has(key)) map.set(key, {name:p.name, number:p.number, activeTypes:p.activeTypes||[]});
+    });
+  });
+  state.pitchers.forEach(p=>{
+    const key = pitcherKey(p.name, p.number);
+    map.set(key, {name:p.name, number:p.number, activeTypes:p.activeTypes||[]});
+  });
+  return Array.from(map.values()).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+}
+function renderRosterChips(wrapperId, containerId, onPick){
+  const wrap = document.getElementById(wrapperId);
+  const el = document.getElementById(containerId);
+  if(!wrap || !el) return;
+  el.innerHTML = '';
+  getRosterPitchers().then(roster=>{
+    if(roster.length === 0){ wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    roster.forEach(p=>{
+      const chip = document.createElement('div');
+      chip.className = 'roster-chip';
+      chip.textContent = displayPitcherObj(p);
+      chip.onclick = ()=> onPick(p);
+      el.appendChild(chip);
+    });
+  });
+}
+function pickSetupRosterPitcher(p){
+  document.getElementById('setup-pname').value = p.name || '';
+  document.getElementById('setup-pnum').value = p.number || '';
+  renderChipGrid('setup-pitch-chips', (p.activeTypes||[]).filter(t=>PITCH_TYPES.includes(t)));
+  const customExisting = (p.activeTypes||[]).find(t=>!PITCH_TYPES.includes(t));
+  document.getElementById('setup-custom-pitch').value = customExisting || '';
+  flashToast('Filled in ' + displayPitcherObj(p));
+}
+function pickChangePitcherRoster(p){
+  document.getElementById('cp-name').value = p.name || '';
+  document.getElementById('cp-num').value = p.number || '';
+  const existing = state.pitchers.find(sp=>pitcherKey(sp.name,sp.number)===pitcherKey(p.name,p.number));
+  const types = existing ? existing.activeTypes : p.activeTypes;
+  renderChipGrid('cp-pitch-chips', (types||[]).filter(t=>PITCH_TYPES.includes(t)));
+  const customExisting = (types||[]).find(t=>!PITCH_TYPES.includes(t));
+  document.getElementById('cp-custom').value = customExisting || '';
+  flashToast('Filled in ' + displayPitcherObj(p));
+}
+
 /* ---------------- Setup ---------------- */
 renderChipGrid('setup-pitch-chips', []);
+renderRosterChips('setup-roster-field', 'setup-roster-chips', pickSetupRosterPitcher);
 
 function startGame(){
   const pnameEl = document.getElementById('setup-pname');
@@ -560,6 +666,8 @@ function startGame(){
   state.gameId = generateGameId();
   state.createdAt = Date.now();
   state.pitches = [];
+  state.batterNumbers = {};
+  state.finalized = false;
 
   renderTrackPitchGrid();
   buildZoneGrid();
@@ -576,6 +684,7 @@ function openChangePitcher(){
   renderChipGrid('cp-pitch-chips', (cur.activeTypes||[]).filter(t=>PITCH_TYPES.includes(t)));
   const customExisting = (cur.activeTypes||[]).find(t=>!PITCH_TYPES.includes(t));
   if(customExisting) document.getElementById('cp-custom').value = customExisting;
+  renderRosterChips('cp-roster-field', 'cp-roster-chips', pickChangePitcherRoster);
   showScreen('screen-changepitcher');
 }
 function cpSyncChips(){
@@ -622,6 +731,7 @@ function renderTrackPitchGrid(){
   });
 }
 function selectPitchType(type, el){
+  if(state.finalized){ flashToast('This game is finalized — pitch entry is locked'); return; }
   state.pendingType = type;
   document.querySelectorAll('#pitch-type-grid .pitch-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
@@ -675,6 +785,7 @@ function selectSubtype(subtype){
 }
 
 function commitPitch(result, inPlayType){
+  if(state.finalized){ flashToast('This game is finalized — pitch entry is locked'); return; }
   const cz = state.pendingCalled, az = state.pendingActual;
   const n = state.pitches.length + 1;
   const abId = state.atBatId;
@@ -734,14 +845,34 @@ function computeCount(atBatId){
 function refreshTrackScreen(){
   document.getElementById('track-pitcher-name').textContent = displayPitcher();
   document.getElementById('track-game-label').textContent = state.gameLabel || 'Untitled game';
-  document.getElementById('track-batter-slot').textContent = state.batterSlot;
-  document.getElementById('track-lineup-size').textContent = state.lineupSize;
+  const bnum = getBatterNumber(state.batterSlot);
+  document.getElementById('track-batter-line').innerHTML = (bnum ? '<span style="color:var(--clay-dark); font-weight:800;">#' + bnum + '</span> ' : '') + 'Batter <b>' + state.batterSlot + '</b> of <span>' + state.lineupSize + '</span> <span class="editable-link" style="font-size:10px;">✎ set #</span>';
+
+  const lastAbNotice = document.getElementById('track-last-ab-notice');
+  const priorOutcome = priorAtBatOutcome(state.batterSlot, state.atBatId);
+  if(priorOutcome){
+    lastAbNotice.style.display = 'block';
+    lastAbNotice.textContent = 'Last time up: ' + priorOutcome;
+  } else {
+    lastAbNotice.style.display = 'none';
+  }
   document.getElementById('track-pitch-count').textContent = state.pitches.filter(p=>p.pitcherIdx===state.currentPitcherIdx).length;
   document.getElementById('log-section-label').textContent = 'Log (' + state.pitches.length + ')';
 
   const c = computeCount(state.atBatId);
   document.getElementById('count-b').textContent = c.balls;
   document.getElementById('count-s').textContent = c.strikes;
+
+  const lockNotice = document.getElementById('track-finalized-notice');
+  if(state.finalized){
+    lockNotice.style.display = 'block';
+    document.getElementById('pitch-type-grid').classList.add('disabled-veil');
+    document.getElementById('track-zone-grid').classList.add('disabled-veil');
+    document.querySelector('.result-row').classList.add('disabled-veil');
+    document.getElementById('subtype-row').style.display = 'none';
+  } else {
+    lockNotice.style.display = 'none';
+  }
 
   persistState();
 
@@ -768,10 +899,36 @@ function resultCode(p){
   return p.result;
 }
 
-function showScreen(id){
+function showScreen(id, fromBack){
+  const current = document.querySelector('.screen.active');
+  if(!fromBack && current && current.id !== id){
+    navStack.push(current.id);
+  }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
+function goBack(){
+  if(navStack.length === 0) return;
+  const prev = navStack.pop();
+  showScreen(prev, true);
+}
+(function setupSwipeBack(){
+  const app = document.getElementById('app');
+  let startX = 0, startY = 0, tracking = false;
+  app.addEventListener('touchstart', (e)=>{
+    if(e.touches.length !== 1) return;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY;
+    tracking = startX < 36;
+  }, {passive:true});
+  app.addEventListener('touchend', (e)=>{
+    if(!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if(dx > 70 && Math.abs(dy) < 50) goBack();
+  }, {passive:true});
+})();
 
 let toastTimer;
 function flashToast(msg){
@@ -931,9 +1088,16 @@ checkForSavedGame();
 
 /* ---------------- Batter Breakdown screen ---------------- */
 function goBatters(){
+  goToBatterCard(state.batterSlot);
+}
+function goToBatterCard(slot){
   cameFromReport = document.getElementById('screen-report').classList.contains('active');
   buildBatterBreakdown();
   showScreen('screen-batters');
+  const card = document.getElementById('batter-card-slot-' + slot);
+  if(card){
+    requestAnimationFrame(()=> card.scrollIntoView({block:'start', behavior:'auto'}));
+  }
 }
 function closeBatters(){
   showScreen(cameFromReport ? 'screen-report' : 'screen-track');
@@ -949,7 +1113,13 @@ function slotSummary(slot){
   const ld = inPlay.filter(p=>p.inPlayType==='Line Drive').length;
   const gb = inPlay.filter(p=>p.inPlayType==='Ground Ball').length;
   const onTargetPct = rows.length ? Math.round((rows.filter(p=>p.onTarget).length/rows.length)*100) : 0;
-  return {slot, rows, timesFaced: atBats.size, pitches: rows.length, balls, strikes, hbp, inPlayN: inPlay.length, pf, ld, gb, onTargetPct};
+  const pas = groupByPA(rows);
+  const bb = pas.filter(pa=>{
+    let b=0; pa.pitches.forEach(p=>{ if(p.result==='Ball') b++; });
+    return b>=4;
+  }).length;
+  const lastAB = pas.length ? paOutcome(pas[pas.length-1].pitches) : '—';
+  return {slot, rows, timesFaced: atBats.size, pitches: rows.length, balls, strikes, hbp, inPlayN: inPlay.length, pf, ld, gb, onTargetPct, bb, lastAB};
 }
 function groupByPA(rows){
   const map = new Map();
@@ -981,6 +1151,12 @@ function paOutcome(paPitches){
   if(strikes>=3) return 'Strikeout';
   return 'In progress';
 }
+function priorAtBatOutcome(slot, excludeAtBatId){
+  const rows = state.pitches.filter(p=>p.batterSlot===slot);
+  const pas = groupByPA(rows).filter(pa=>pa.atBatId!==excludeAtBatId);
+  if(!pas.length) return null;
+  return paOutcome(pas[pas.length-1].pitches);
+}
 function buildBatterBreakdown(){
   document.getElementById('batters-sub').textContent = (state.gameLabel || 'Untitled game') + ' · all pitchers';
   const list = document.getElementById('batters-list');
@@ -993,13 +1169,19 @@ function buildBatterBreakdown(){
     list.innerHTML = '<div class="empty-batters">No pitches logged for any batter yet.</div>';
     return;
   }
+  const hasPrevious = state.atBatId > 1;
+  const prevSlot = state.batterSlot > 1 ? state.batterSlot - 1 : state.lineupSize;
   slotsWithData.forEach(slot=>{
     const sum = slotSummary(slot);
+    const isCurrent = slot === state.batterSlot;
+    const isPrevious = hasPrevious && slot === prevSlot;
     const card = document.createElement('div');
-    card.className = 'batter-card';
+    card.id = 'batter-card-slot-' + slot;
+    card.className = 'batter-card' + (isCurrent ? ' batter-current' : (isPrevious ? ' batter-previous' : ''));
+    const flag = isCurrent ? ' <span class="batter-flag cur">Current</span>' : (isPrevious ? ' <span class="batter-flag prev">Previous</span>' : '');
     card.innerHTML =
       '<div class="batter-card-head">' +
-        '<div class="bt">Batter #' + slot + '</div>' +
+        '<div class="bt"><span class="editable-link" onclick="editBatterNumber(' + slot + ')">✎ ' + batterLabel(slot) + '</span>' + flag + '</div>' +
         '<div class="bs">' + sum.timesFaced + ' plate appearance' + (sum.timesFaced!==1?'s':'') + ' · ' + sum.pitches + ' pitch' + (sum.pitches!==1?'es':'') + '</div>' +
       '</div>' +
       '<div class="batter-stat-chips">' +
@@ -1085,13 +1267,22 @@ function setOutOnPlay(pitchN, val){
 /* ---------------- Report ---------------- */
 function goReport(){
   if(state.pitches.length === 0){
-    openModal('End game?', [], ()=>{ buildReport(); showScreen('screen-report'); }, 'End game', 'No pitches logged yet. End game anyway?');
+    openModal('View stats?', [], ()=>{ buildReport(); showScreen('screen-report'); }, 'View stats', 'No pitches logged yet. View stats anyway?');
     return;
   }
   buildReport();
   showScreen('screen-report');
 }
 function backToGame(){ showScreen('screen-track'); }
+function finalizeGame(){
+  if(state.finalized){ flashToast('Game already finalized'); return; }
+  openModal('Finalize this game?', [], async ()=>{
+    state.finalized = true;
+    await persistState();
+    flashToast('Game finalized — pitch entry is now locked');
+    buildReport();
+  }, 'Finalize', 'This locks the game permanently — no more pitches can be logged. There is no un-finalize; to change anything after this, delete the game from Game History and re-enter it from scratch.');
+}
 
 function pitcherStats(idx){
   const rows = state.pitches.filter(p=>p.pitcherIdx===idx);
@@ -1152,6 +1343,8 @@ function inPlaySummary(rows){
 
 function buildReport(){
   document.getElementById('rep-sub').textContent = (state.gameLabel || 'Untitled game') + ' · ' + new Date().toLocaleDateString();
+  document.getElementById('rep-finalized-badge').style.display = state.finalized ? 'inline-block' : 'none';
+  document.getElementById('finalize-btn').style.display = state.finalized ? 'none' : 'block';
   const pIdxs = pitchersWithData();
 
   const container = document.getElementById('rep-pitchers-container');
@@ -1195,26 +1388,6 @@ function buildReport(){
     tableWrap.appendChild(scrollWrap);
     block.appendChild(tableWrap);
 
-    const ipSum = inPlaySummary(stats.rows);
-    if(ipSum){
-      const ipWrap = document.createElement('div');
-      ipWrap.className = 'table-wrap';
-      ipWrap.style.marginTop = '0';
-      let ipHtml = '<div style="padding:10px 12px; font-family:\'IBM Plex Mono\', monospace; font-size:10.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.05em; font-weight:700; border-bottom:1px solid var(--ink-faint);">Balls In Play (' + ipSum.ipTotal + ')</div>';
-      if(ipSum.dirTotal > 0){
-        ipHtml += '<div class="table-scroll"><table><thead><tr><th>Direction</th><th>Count</th></tr></thead><tbody>';
-        DIRECTIONS.forEach(d=>{
-          if(ipSum.dirCounts[d] > 0) ipHtml += '<tr><td>' + d + '</td><td>' + ipSum.dirCounts[d] + '</td></tr>';
-        });
-        ipHtml += '</tbody></table></div>';
-      }
-      if(ipSum.outSafeTotal > 0){
-        ipHtml += '<div style="padding:10px 12px; font-family:\'IBM Plex Mono\', monospace; font-size:11px;">Outs: <b>' + ipSum.outN + '</b> · Safe: <b>' + ipSum.safeN + '</b></div>';
-      }
-      ipWrap.innerHTML = ipHtml;
-      block.appendChild(ipWrap);
-    }
-
     container.appendChild(block);
   });
 
@@ -1224,7 +1397,7 @@ function buildReport(){
     const sum = slotSummary(s);
     if(sum.pitches===0) continue;
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>#' + sum.slot + '</td><td>' + sum.timesFaced + '</td><td>' + sum.pitches + '</td><td>' + sum.balls + '</td><td>' + sum.strikes + '</td><td>' + sum.inPlayN + '</td><td>' + sum.hbp + '</td>';
+    tr.innerHTML = '<td><span class="editable-link" onclick="goToBatterCard(' + sum.slot + ')">' + batterLabel(sum.slot) + ' ›</span></td><td>' + sum.timesFaced + '</td><td>' + sum.pitches + '</td><td>' + sum.balls + '</td><td>' + sum.strikes + '</td><td>' + sum.bb + '</td><td>' + sum.inPlayN + '</td><td>' + sum.hbp + '</td><td>' + sum.lastAB + '</td>';
     batterBody.appendChild(tr);
   }
 
@@ -1320,12 +1493,12 @@ function exportCSV(){
   });
   let csv = [header, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
 
-  const batterHeader = ['BatterSlot','TimesFaced','Pitches','Balls','Strikes','HBP','InPlay','PopFly','LineDrive','GroundBall','OnTargetPct'];
+  const batterHeader = ['BatterSlot','JerseyNumber','TimesFaced','Pitches','Balls','Strikes','BB','HBP','InPlay','PopFly','LineDrive','GroundBall','OnTargetPct'];
   const batterRows = [];
   for(let s=1; s<=state.lineupSize; s++){
     const sum = slotSummary(s);
     if(sum.pitches===0) continue;
-    batterRows.push([sum.slot, sum.timesFaced, sum.pitches, sum.balls, sum.strikes, sum.hbp, sum.inPlayN, sum.pf, sum.ld, sum.gb, sum.onTargetPct+'%']);
+    batterRows.push([sum.slot, getBatterNumber(s), sum.timesFaced, sum.pitches, sum.balls, sum.strikes, sum.bb, sum.hbp, sum.inPlayN, sum.pf, sum.ld, sum.gb, sum.onTargetPct+'%']);
   }
   csv += '\n\n' + [batterHeader, ...batterRows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
 
@@ -1446,12 +1619,13 @@ function padCol(str, len){
   return str.length >= len ? str.slice(0, len-1)+' ' : str.padEnd(len,' ');
 }
 function buildBatterBreakdownText(){
-  const lines = [padCol('Batter',8)+padCol('PAs',5)+padCol('Pitch',7)+padCol('B',3)+padCol('K',3)+padCol('HBP',5)+'IP'];
-  lines.push('-'.repeat(38));
+  const lines = [padCol('Batter',8)+padCol('PAs',5)+padCol('Pitch',7)+padCol('B',3)+padCol('K',3)+padCol('BB',3)+padCol('HBP',5)+'IP'];
+  lines.push('-'.repeat(41));
   for(let s=1; s<=state.lineupSize; s++){
     const sum = slotSummary(s);
     if(sum.pitches===0) continue;
-    lines.push(padCol('#'+s,8)+padCol(String(sum.timesFaced),5)+padCol(String(sum.pitches),7)+padCol(String(sum.balls),3)+padCol(String(sum.strikes),3)+padCol(String(sum.hbp),5)+sum.inPlayN);
+    const label = getBatterNumber(s) ? '#'+getBatterNumber(s) : '#'+s;
+    lines.push(padCol(label,8)+padCol(String(sum.timesFaced),5)+padCol(String(sum.pitches),7)+padCol(String(sum.balls),3)+padCol(String(sum.strikes),3)+padCol(String(sum.bb),3)+padCol(String(sum.hbp),5)+sum.inPlayN);
   }
   return lines.join('\n');
 }
@@ -1535,6 +1709,7 @@ function newGame(){
     state.batterSlot = 1;
     document.getElementById('resume-banner').style.display = 'none';
     showScreen('screen-setup');
+    renderRosterChips('setup-roster-field', 'setup-roster-chips', pickSetupRosterPitcher);
   }, 'Start new game', 'Your current game stays saved in Game History — this just clears the screen to start tracking a new one.');
 }
 </script>
